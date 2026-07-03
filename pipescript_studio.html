@@ -1,0 +1,1193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PipeScript Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#0F1319;
+      --panel-dark:#151B23;
+      --panel-dark-2:#1B222C;
+      --line:#262F3B;
+      --line-soft:#1F2732;
+      --paper:#F6F4EF;
+      --paper-2:#EDEAE1;
+      --paper-line:#DCD7C9;
+      --text-lo:#8B94A3;
+      --text-hi:#E7EAEE;
+      --text-paper:#262218;
+      --text-paper-mute:#8A8371;
+      --pipe:#FF8A3D;
+      --pipe-dim:#7A4222;
+      --type-green:#59D9A0;
+      --string-blue:#7FB4E0;
+      --kw-violet:#C79BF0;
+      --err:#FF6B6B;
+      --ok:#59D9A0;
+      --warn:#FFC24B;
+      --radius:10px;
+      --mono:'JetBrains Mono', ui-monospace, monospace;
+      --disp:'Space Grotesk', ui-sans-serif, sans-serif;
+      --body:'Inter', ui-sans-serif, sans-serif;
+    }
+
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;min-height:100%;}
+    body{
+      background: radial-gradient(circle at top left, rgba(255,138,61,0.08), transparent 25%), var(--ink);
+      font-family: var(--body);
+      color: var(--text-hi);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app{display:flex;flex-direction:column;min-height:100vh;}
+
+    .header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+      padding:14px 22px;
+      background:linear-gradient(180deg, #171E27 0%, #131920 100%);
+      border-bottom:1px solid var(--line);
+    }
+    .brand{display:flex;align-items:center;gap:12px;}
+    .brand-mark{width:34px;height:34px;flex-shrink:0;}
+    .brand-text h1{
+      font-family:var(--disp);
+      font-size:17px;
+      font-weight:700;
+      letter-spacing:0.2px;
+      margin:0;
+      color:var(--text-hi);
+    }
+    .brand-text span{
+      display:block;
+      font-size:11px;
+      color:var(--text-lo);
+      font-family:var(--mono);
+      letter-spacing:0.5px;
+      margin-top:1px;
+    }
+
+    .header-mid,
+    .status-pill,
+    .toolbar-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-family:var(--mono);
+      font-size:12px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:var(--panel-dark);
+      color:var(--text-lo);
+    }
+    .header-mid{padding:6px 12px;}
+    .header-mid .dot,
+    .flag .dot{
+      width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(89,217,160,0.15);
+    }
+
+    .header-controls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .control-select{
+      appearance:none;
+      border:1px solid var(--line);
+      background:var(--panel-dark);
+      color:var(--text-hi);
+      border-radius:999px;
+      padding:10px 14px;
+      font-family:var(--mono);
+      font-size:12px;
+      min-height:40px;
+      outline:none;
+      max-width:240px;
+    }
+    .secondary-btn,
+    .run-btn{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      border:none;
+      cursor:pointer;
+      border-radius:999px;
+      padding:11px 16px;
+      font-family:var(--disp);
+      font-weight:700;
+      font-size:14px;
+      letter-spacing:0.2px;
+      transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+    .secondary-btn{
+      color:var(--text-hi);
+      background:linear-gradient(180deg, #202838 0%, #171D28 100%);
+      box-shadow:0 1px 0 rgba(255,255,255,0.08) inset;
+      border:1px solid var(--line);
+    }
+    .run-btn{
+      color:#21130A;
+      background:linear-gradient(180deg, #FF9A55 0%, #FF7A24 100%);
+      box-shadow:0 1px 0 rgba(255,255,255,0.35) inset, 0 6px 16px -6px rgba(255,122,36,0.6);
+      padding:11px 20px 11px 16px;
+    }
+    .secondary-btn:hover,
+    .run-btn:hover{transform:translateY(-1px);}
+    .secondary-btn:active,
+    .run-btn:active{transform:translateY(0) scale(0.98);}
+    .run-btn.running,
+    .secondary-btn.busy{pointer-events:none;opacity:0.86;}
+    .run-btn svg,
+    .secondary-btn svg{width:15px;height:15px;}
+
+    .workspace{
+      display:grid;
+      grid-template-columns: 1fr 34px 1fr;
+      flex:1;
+      min-height:0;
+    }
+    @media (max-width: 980px){
+      .workspace{grid-template-columns:1fr;}
+      .conduit{display:none;}
+    }
+
+    .editor-pane,
+    .data-pane{min-width:0;}
+    .editor-pane{
+      background:var(--panel-dark);
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .pane-tab{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 16px;
+      border-bottom:1px solid var(--line-soft);
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--text-lo);
+      flex-wrap:wrap;
+    }
+    .pane-tab-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .file-chip{
+      display:flex;align-items:center;gap:7px;
+      background:var(--panel-dark-2);
+      border:1px solid var(--line);
+      padding:5px 10px 5px 8px;
+      border-radius:6px;
+      color:var(--text-hi);
+    }
+    .file-chip .sq{width:8px;height:8px;background:var(--pipe);border-radius:2px;flex-shrink:0;}
+    .toolbar-chip{
+      border:1px solid var(--line);
+      background:var(--panel-dark-2);
+      color:var(--text-lo);
+      padding:5px 10px;
+      font-size:11px;
+    }
+
+    .editor-shell{
+      position:relative;
+      flex:1;
+      min-height:0;
+      overflow:hidden;
+    }
+    .syntax-layer,
+    .code-input{
+      position:absolute;
+      inset:0;
+      margin:0;
+      padding:18px;
+      font-family:var(--mono);
+      font-size:13.5px;
+      line-height:1.85;
+      white-space:pre;
+      overflow:auto;
+      tab-size:2;
+    }
+    .syntax-layer{
+      pointer-events:none;
+      color:var(--text-hi);
+      background:var(--panel-dark);
+    }
+    .syntax-line{
+      display:grid;
+      grid-template-columns: 42px 1fr;
+      gap:14px;
+      min-height:1.85em;
+      align-items:start;
+    }
+    .syntax-line.active{background:rgba(255,138,61,0.05);}
+    .syntax-line.error{
+      background:rgba(255,107,107,0.08);
+      box-shadow: inset 3px 0 0 var(--err);
+    }
+    .line-no{
+      text-align:right;
+      color:#4A5566;
+      user-select:none;
+    }
+    .syntax-line.active .line-no{color:var(--pipe);}
+    .syntax-line.error .line-no{color:var(--err);}
+    .code-fragment{min-width:0;white-space:pre-wrap;word-break:break-word;}
+
+    .code-input{
+      resize:none;
+      border:none;
+      outline:none;
+      background:transparent;
+      color:transparent;
+      caret-color:var(--text-hi);
+      -webkit-text-fill-color:transparent;
+      text-shadow:none;
+      width:100%;
+      height:100%;
+    }
+    .code-input::selection{background:rgba(255,138,61,0.35);}
+    .code-input:focus{outline:none;}
+
+    .kw{color:var(--kw-violet);}
+    .type{color:var(--type-green);}
+    .str{color:var(--string-blue);}
+    .cmt{color:#5B6472;font-style:italic;}
+    .pipe-op{color:var(--pipe);font-weight:600;}
+    .fn{color:#E7EAEE;}
+    .num{color:#F2C879;}
+    .punct{color:#6B7688;}
+
+    .editor-status{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:8px 18px 10px;
+      border-top:1px solid var(--line-soft);
+      background:var(--panel-dark);
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--text-lo);
+    }
+
+    .conduit{
+      position:relative;
+      background:var(--ink);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .conduit-pipe{
+      position:relative;
+      width:14px;
+      height:100%;
+      background:linear-gradient(90deg, #2A3240 0%, #3A4353 45%, #262F3B 100%);
+      border-left:1px solid #3D4759;
+      border-right:1px solid #10151C;
+    }
+    .flange{
+      position:absolute;
+      left:-7px;right:-7px;
+      height:16px;
+      background:#333D4C;
+      border:1px solid #444F60;
+      border-radius:3px;
+    }
+    .flange.top{top:10%;}
+    .flange.bottom{bottom:10%;}
+    .flange::before,.flange::after{
+      content:"";
+      position:absolute;
+      width:4px;height:4px;
+      border-radius:50%;
+      background:#171E27;
+      top:50%;transform:translateY(-50%);
+    }
+    .flange::before{left:4px;}
+    .flange::after{right:4px;}
+    .flow-track{position:absolute;top:0;bottom:0;left:50%;width:4px;transform:translateX(-50%);overflow:hidden;border-radius:2px;}
+    .flow-dash{
+      position:absolute;
+      width:4px;height:22px;
+      background:var(--pipe);
+      border-radius:2px;
+      opacity:0;
+      top:-30px;
+      box-shadow:0 0 8px 1px rgba(255,138,61,0.5);
+    }
+    .conduit.flowing .flow-dash{animation:flowDown 1.1s linear infinite;opacity:1;}
+    .flow-dash:nth-child(1){animation-delay:0s;}
+    .flow-dash:nth-child(2){animation-delay:0.28s;}
+    .flow-dash:nth-child(3){animation-delay:0.56s;}
+    .flow-dash:nth-child(4){animation-delay:0.84s;}
+    @keyframes flowDown{
+      0%{top:-30px;opacity:0;}
+      10%{opacity:1;}
+      90%{opacity:1;}
+      100%{top:100%;opacity:0;}
+    }
+    .conduit-label{
+      position:absolute;
+      top:50%;left:50%;
+      transform:translate(-50%,-50%) rotate(90deg);
+      font-family:var(--mono);
+      font-size:10px;
+      letter-spacing:2px;
+      color:var(--text-lo);
+      background:var(--ink);
+      padding:3px 8px;
+      white-space:nowrap;
+      z-index:2;
+    }
+
+    .data-pane{
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+      background:var(--paper);
+      color:var(--text-paper);
+    }
+    .data-half{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .data-half + .data-half{border-top:1px solid var(--paper-line);}
+    .data-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 18px 10px;
+      flex-wrap:wrap;
+    }
+    .data-head-left{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+    .data-head h2{
+      font-family:var(--disp);
+      font-size:13px;
+      font-weight:700;
+      letter-spacing:0.4px;
+      text-transform:uppercase;
+      margin:0;
+      color:var(--text-paper);
+    }
+    .status-pill{
+      font-size:10.5px;
+      padding:3px 9px;
+      letter-spacing:0.3px;
+      border-color:transparent;
+      background:#F1E4CE;
+    }
+    .status-pill.raw{background:#F1E4CE;color:#8A5A22;}
+    .status-pill.clean{background:#DDF3E8;color:#1E8F63;}
+    .status-pill.neutral{background:#E9E5DA;color:#6E695D;}
+    .status-pill.online{background:#DDF3E8;color:#1E8F63;}
+    .status-pill.offline{background:#FBE1E1;color:#B23A3A;}
+
+    .badge-icon{
+      width:20px;height:20px;
+      border-radius:5px;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+    }
+    .badge-icon.before{background:#F1E4CE;}
+    .badge-icon.after{background:#DDF3E8;}
+    .badge-icon svg{width:11px;height:11px;}
+
+    .table-wrap{overflow:auto;}
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-family:var(--mono);
+      font-size:12.5px;
+    }
+    thead th{
+      text-align:left;
+      padding:6px 18px;
+      font-family:var(--body);
+      font-weight:600;
+      font-size:11px;
+      letter-spacing:0.3px;
+      text-transform:uppercase;
+      color:var(--text-paper-mute);
+      border-bottom:1px solid var(--paper-line);
+    }
+    tbody td{
+      padding:7px 18px;
+      border-bottom:1px solid #E8E4D8;
+      vertical-align:top;
+    }
+    tbody tr:last-child td{border-bottom:none;}
+    .flag{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      font-family:var(--body);
+      font-size:11px;
+      font-weight:600;
+      padding:2px 8px 2px 6px;
+      border-radius:999px;
+    }
+    .flag.neg,.flag.null{background:#FBE1E1;color:#B23A3A;}
+    .flag.ok{background:#DDF3E8;color:#1E8F63;}
+    .flag .dot{width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:none;}
+    .cell-muted{color:var(--text-paper-mute);}
+    .cell-null{color:#B23A3A;font-style:italic;}
+    .empty-state{
+      padding:16px 18px;
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--text-paper-mute);
+    }
+
+    .console{
+      border-top:1px solid var(--paper-line);
+      background:#FBFAF6;
+      font-family:var(--mono);
+      font-size:12px;
+      padding:10px 18px 14px;
+      max-height:190px;
+      overflow:auto;
+    }
+    .console-line{
+      display:flex;
+      gap:9px;
+      padding:3px 0;
+      opacity:0;
+      transform:translateY(4px);
+      animation:fadeUp .35s ease forwards;
+    }
+    @keyframes fadeUp{to{opacity:1;transform:translateY(0);}}
+    .console-line .tag{
+      flex-shrink:0;
+      width:68px;
+      font-weight:700;
+      font-size:10.5px;
+      letter-spacing:0.4px;
+    }
+    .console-line.ok .tag{color:#1E8F63;}
+    .console-line.info .tag{color:#6E7A8C;}
+    .console-line.warn .tag{color:#A9740E;}
+    .console-line.error .tag{color:#B23A3A;}
+    .console-line span.msg{color:#4A4536;white-space:pre-wrap;word-break:break-word;}
+    .empty-console{color:var(--text-paper-mute);font-style:italic;}
+
+    .footer-note{
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--text-lo);
+      padding:8px 18px 10px;
+      border-top:1px solid var(--line-soft);
+      background:var(--panel-dark);
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .flow-dash{animation:none !important;opacity:0.6 !important;top:40% !important;}
+      .console-line{animation:none;opacity:1;transform:none;}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="32" height="32" rx="8" fill="#1B222C" stroke="#2E3846"/>
+          <path d="M8 12H15" stroke="#59D9A0" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M8 22H15" stroke="#7FB4E0" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M17 17H26" stroke="#FF8A3D" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M22.5 13.5L26 17L22.5 20.5" stroke="#FF8A3D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="brand-text">
+          <h1>PipeScript Studio</h1>
+          <span>DATA PIPELINE WORKBENCH</span>
+        </div>
+      </div>
+
+      <div class="header-mid">
+        <span class="dot"></span>
+        <span id="healthText">Checking backend…</span>
+      </div>
+
+      <div class="header-controls">
+        <select id="exampleSelect" class="control-select" aria-label="Example scripts">
+          <option value="">Loading examples…</option>
+        </select>
+        <button class="secondary-btn" id="loadExampleBtn" type="button">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.5 7.5L8 11L11.5 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13.5H13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Load example
+        </button>
+        <button class="secondary-btn" id="validateBtn" type="button">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8.5L6.2 11.2L12.5 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Validate
+        </button>
+        <button class="run-btn" id="runBtn" type="button">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 2.5L13 8L4 13.5V2.5Z" fill="#21130A"/></svg>
+          <span id="runLabel">Run pipeline</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <div class="editor-pane">
+        <div class="pane-tab">
+          <div class="pane-tab-left">
+            <div class="file-chip"><span class="sq"></span><span id="fileName">cleaners.ps</span></div>
+            <span>PipeScript editor</span>
+          </div>
+          <span class="toolbar-chip" id="editorMode">editable</span>
+        </div>
+
+        <div class="editor-shell">
+          <pre id="syntaxLayer" class="syntax-layer" aria-hidden="true"></pre>
+          <textarea id="codeInput" class="code-input" spellcheck="false" aria-label="PipeScript editor"></textarea>
+        </div>
+
+        <div class="editor-status">
+          <span id="cursorInfo">Ln 1, Col 1</span>
+          <span id="validationInfo">Validation idle</span>
+        </div>
+      </div>
+
+      <div class="conduit" id="conduit">
+        <div class="conduit-pipe">
+          <div class="flange top"></div>
+          <div class="flange bottom"></div>
+          <div class="flow-track">
+            <div class="flow-dash"></div>
+            <div class="flow-dash"></div>
+            <div class="flow-dash"></div>
+            <div class="flow-dash"></div>
+          </div>
+        </div>
+        <div class="conduit-label">DATA FLOW</div>
+      </div>
+
+      <div class="data-pane">
+        <div class="data-half">
+          <div class="data-head">
+            <div class="data-head-left">
+              <div class="badge-icon before">
+                <svg viewBox="0 0 12 12" fill="none"><path d="M2 2L10 10M10 2L2 10" stroke="#8A5A22" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </div>
+              <h2>Before — raw input</h2>
+            </div>
+            <span class="status-pill neutral" id="beforeStatus">awaiting run</span>
+          </div>
+          <div class="table-wrap" id="beforeTableWrap">
+            <div class="empty-state">Run the pipeline to load backend input data.</div>
+          </div>
+        </div>
+
+        <div class="data-half">
+          <div class="data-head">
+            <div class="data-head-left">
+              <div class="badge-icon after">
+                <svg viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#1E8F63" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <h2>After — cleaned output</h2>
+            </div>
+            <span class="status-pill clean" id="afterStatus">awaiting run</span>
+          </div>
+          <div class="table-wrap" id="afterTableWrap">
+            <div class="empty-state">Run the pipeline to view backend output.</div>
+          </div>
+          <div class="console" id="console">
+            <div class="empty-console">console idle — no output yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const apiBase = (
+        window.PIPESCRIPT_API_BASE__ ||
+        localStorage.getItem('pipescriptApiBase') ||
+        (window.location.protocol === 'file:' ? 'http://127.0.0.1:8000' : '')
+      ).replace(/\/$/, '');
+
+      const starterCode = `global Int defaultAge = 0;
+
+class AgeCleaner {
+  Int clean(Int value) {
+    if (value < 0) { return defaultAge; }
+    return value;
+  }
+}
+
+pipeline main() {
+  local Array messy_ages = [25, -3, null, 41, -9];
+  AgeCleaner cleaner = new AgeCleaner();
+
+  messy_ages >> removeBlanks() >> cleaner.clean() >> sortAscending();
+}`;
+
+      const state = {
+        examples: [],
+        currentData: null,
+        validationErrors: new Set(),
+        validationSuccess: null,
+        running: false,
+        validating: false,
+        lastActionMs: null,
+        healthOnline: false,
+        healthTimer: null,
+      };
+
+      const elements = {};
+
+      document.addEventListener('DOMContentLoaded', initialize);
+
+      function initialize() {
+        cacheElements();
+        bindEvents();
+        elements.codeInput.value = starterCode;
+        renderEditor();
+        updateCursorInfo();
+        refreshConsole([{ level: 'info', message: 'Editor ready. Fetching backend status and examples…' }]);
+        loadExamples();
+        refreshHealth();
+        state.healthTimer = window.setInterval(refreshHealth, 15000);
+      }
+
+      function cacheElements() {
+        elements.exampleSelect = document.getElementById('exampleSelect');
+        elements.loadExampleBtn = document.getElementById('loadExampleBtn');
+        elements.validateBtn = document.getElementById('validateBtn');
+        elements.runBtn = document.getElementById('runBtn');
+        elements.runLabel = document.getElementById('runLabel');
+        elements.healthText = document.getElementById('healthText');
+        elements.codeInput = document.getElementById('codeInput');
+        elements.syntaxLayer = document.getElementById('syntaxLayer');
+        elements.cursorInfo = document.getElementById('cursorInfo');
+        elements.validationInfo = document.getElementById('validationInfo');
+        elements.beforeTableWrap = document.getElementById('beforeTableWrap');
+        elements.afterTableWrap = document.getElementById('afterTableWrap');
+        elements.beforeStatus = document.getElementById('beforeStatus');
+        elements.afterStatus = document.getElementById('afterStatus');
+        elements.console = document.getElementById('console');
+        elements.conduit = document.getElementById('conduit');
+        elements.editorMode = document.getElementById('editorMode');
+      }
+
+      function bindEvents() {
+        elements.codeInput.addEventListener('input', handleEditorInput);
+        elements.codeInput.addEventListener('scroll', syncEditorScroll);
+        elements.codeInput.addEventListener('keyup', updateCursorInfo);
+        elements.codeInput.addEventListener('click', updateCursorInfo);
+        elements.codeInput.addEventListener('select', updateCursorInfo);
+        elements.validateBtn.addEventListener('click', validateProgram);
+        elements.runBtn.addEventListener('click', runProgram);
+        elements.loadExampleBtn.addEventListener('click', loadSelectedExample);
+        elements.exampleSelect.addEventListener('change', updateExamplePreview);
+      }
+
+      function handleEditorInput() {
+        state.validationErrors.clear();
+        state.validationSuccess = null;
+        elements.validationInfo.textContent = 'Validation idle';
+        renderEditor();
+        updateCursorInfo();
+      }
+
+      function updateExamplePreview() {
+        const example = state.examples.find((item) => item.name === elements.exampleSelect.value);
+        if (!example) {
+          elements.editorMode.textContent = 'editable';
+          return;
+        }
+
+        elements.editorMode.textContent = example.description || 'example loaded';
+      }
+
+      async function loadExamples() {
+        try {
+          const response = await fetchJson('/examples', { method: 'GET' });
+          const examples = Array.isArray(response) ? response : [];
+          state.examples = examples;
+
+          const options = [
+            '<option value="">Studio starter</option>',
+            ...examples.map((example) => {
+              const label = escapeHtml(example.name);
+              const description = escapeHtml(example.description || '');
+              return `<option value="${label}" title="${description}">${label}</option>`;
+            }),
+          ];
+
+          elements.exampleSelect.innerHTML = options.join('');
+          elements.exampleSelect.value = '';
+          refreshConsole([
+            { level: 'ok', message: `Loaded ${examples.length} backend example${examples.length === 1 ? '' : 's'}.` },
+          ]);
+        } catch (error) {
+          elements.exampleSelect.innerHTML = '<option value="">Examples unavailable</option>';
+          refreshConsole([{ level: 'error', message: `Examples request failed: ${error.message}` }]);
+        }
+      }
+
+      function loadSelectedExample() {
+        const selectedName = elements.exampleSelect.value;
+        if (!selectedName) {
+          elements.codeInput.value = starterCode;
+          state.currentData = null;
+          elements.editorMode.textContent = 'editable';
+          handleEditorInput();
+          refreshConsole([{ level: 'info', message: 'Loaded the studio starter template.' }]);
+          return;
+        }
+
+        const selectedExample = state.examples.find((item) => item.name === selectedName);
+        if (!selectedExample) {
+          refreshConsole([{ level: 'warn', message: 'Selected example is no longer available.' }]);
+          return;
+        }
+
+        elements.codeInput.value = selectedExample.code || '';
+        state.currentData = selectedExample.data ?? null;
+        elements.editorMode.textContent = selectedExample.description || 'example loaded';
+        handleEditorInput();
+        refreshConsole([{ level: 'info', message: `Loaded example: ${selectedExample.name}` }]);
+      }
+
+      async function refreshHealth() {
+        try {
+          const response = await fetchJson('/health', { method: 'GET' });
+          const online = response && response.status === 'ok';
+          state.healthOnline = online;
+          elements.healthText.textContent = online ? 'Backend Online' : 'Backend Offline';
+        } catch (error) {
+          state.healthOnline = false;
+          elements.healthText.textContent = 'Backend Offline';
+        }
+      }
+
+      async function runProgram() {
+        if (state.running || state.validating) {
+          return;
+        }
+
+        const code = elements.codeInput.value.trim();
+        if (!code) {
+          refreshConsole([{ level: 'error', message: 'Editor is empty. Enter PipeScript before running.' }]);
+          return;
+        }
+
+        state.running = true;
+        elements.runBtn.classList.add('running');
+        elements.runLabel.textContent = 'Running…';
+        elements.conduit.classList.add('flowing');
+        elements.validationInfo.textContent = 'Running pipeline';
+
+        const startedAt = performance.now();
+
+        try {
+          const payload = {
+            code: elements.codeInput.value,
+            data: state.currentData,
+          };
+
+          const result = await fetchJson('/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          const elapsedMs = Math.round(performance.now() - startedAt);
+          state.lastActionMs = elapsedMs;
+
+          renderDataset(elements.beforeTableWrap, result.before, 'Input data', 'before');
+          renderDataset(elements.afterTableWrap, result.output, 'Cleaned output', 'after');
+          elements.beforeStatus.textContent = summarizeDataset(result.before);
+          elements.afterStatus.textContent = `${summarizeDataset(result.output)} · ${elapsedMs} ms`;
+
+          const logLines = [];
+          logLines.push({ level: result.success ? 'ok' : 'warn', message: `Run completed in ${elapsedMs} ms` });
+
+          if (Array.isArray(result.print_log) && result.print_log.length > 0) {
+            result.print_log.forEach((entry) => {
+              logLines.push({ level: 'info', message: entry });
+            });
+          } else {
+            logLines.push({ level: 'info', message: 'Backend returned no execution logs.' });
+          }
+
+          if (Array.isArray(result.errors) && result.errors.length > 0) {
+            result.errors.forEach((error) => {
+              logLines.push({
+                level: 'error',
+                message: `${error.phase} error${error.line ? ` (line ${error.line})` : ''}: ${error.message}`,
+              });
+            });
+          }
+
+          refreshConsole(logLines);
+          if (result.success) {
+            elements.validationInfo.textContent = 'Run succeeded';
+            state.validationErrors.clear();
+            state.validationSuccess = true;
+            renderEditor();
+          } else {
+            elements.validationInfo.textContent = 'Run returned backend errors';
+          }
+        } catch (error) {
+          refreshConsole([{ level: 'error', message: `Run request failed: ${error.message}` }]);
+          elements.beforeStatus.textContent = 'run failed';
+          elements.afterStatus.textContent = 'run failed';
+          elements.validationInfo.textContent = 'Run failed';
+        } finally {
+          state.running = false;
+          elements.runBtn.classList.remove('running');
+          elements.runLabel.textContent = 'Run pipeline';
+          elements.conduit.classList.remove('flowing');
+        }
+      }
+
+      async function validateProgram() {
+        if (state.running || state.validating) {
+          return;
+        }
+
+        const code = elements.codeInput.value.trim();
+        if (!code) {
+          refreshConsole([{ level: 'error', message: 'Editor is empty. Enter PipeScript before validating.' }]);
+          return;
+        }
+
+        state.validating = true;
+        elements.validateBtn.classList.add('busy');
+        elements.validationInfo.textContent = 'Validating…';
+
+        const startedAt = performance.now();
+
+        try {
+          const result = await fetchJson('/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: elements.codeInput.value }),
+          });
+
+          const elapsedMs = Math.round(performance.now() - startedAt);
+          const errorLines = new Set();
+          const logLines = [];
+
+          if (Array.isArray(result.errors)) {
+            result.errors.forEach((error) => {
+              if (Number.isFinite(error.line)) {
+                errorLines.add(Number(error.line));
+              }
+              logLines.push({
+                level: 'error',
+                message: `${error.phase} error${error.line ? ` (line ${error.line})` : ''}: ${error.message}`,
+              });
+            });
+          }
+
+          if (result.success) {
+            logLines.unshift({ level: 'ok', message: `Validation passed in ${elapsedMs} ms` });
+          } else {
+            logLines.unshift({ level: 'warn', message: `Validation finished in ${elapsedMs} ms with issues` });
+          }
+
+          state.validationErrors = errorLines;
+          state.validationSuccess = Boolean(result.success);
+          renderEditor();
+          refreshConsole(logLines);
+
+          if (result.success) {
+            elements.validationInfo.textContent = `Validation passed · ${elapsedMs} ms`;
+          } else {
+            elements.validationInfo.textContent = `Validation failed · ${errorLines.size} issue${errorLines.size === 1 ? '' : 's'}`;
+          }
+        } catch (error) {
+          refreshConsole([{ level: 'error', message: `Validate request failed: ${error.message}` }]);
+          elements.validationInfo.textContent = 'Validation failed';
+        } finally {
+          state.validating = false;
+          elements.validateBtn.classList.remove('busy');
+        }
+      }
+
+      function renderEditor() {
+        const lines = elements.codeInput.value.split(/\r?\n/);
+        const activeLine = getCursorLine();
+        elements.syntaxLayer.innerHTML = lines.map((line, index) => {
+          const lineNumber = index + 1;
+          const classes = ['syntax-line'];
+          if (activeLine === lineNumber) {
+            classes.push('active');
+          }
+          if (state.validationErrors.has(lineNumber)) {
+            classes.push('error');
+          }
+          const rendered = highlightLine(line);
+          const content = rendered.length ? rendered : '&nbsp;';
+          return `<div class="${classes.join(' ')}"><span class="line-no">${lineNumber}</span><span class="code-fragment">${content}</span></div>`;
+        }).join('');
+
+        if (state.validationSuccess === true) {
+          elements.editorMode.textContent = 'validated';
+        } else if (state.validationErrors.size > 0) {
+          elements.editorMode.textContent = 'validation issues';
+        } else if (!elements.exampleSelect.value) {
+          elements.editorMode.textContent = 'editable';
+        }
+
+        syncEditorScroll();
+      }
+
+      function highlightLine(line) {
+        if (!line) {
+          return '';
+        }
+
+        const pattern = /\/\/.*$|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:global|class|pipeline|local|if|else|return|new|null|print)\b|\b(?:Int|Float|String|Bool|Array|DataFrame|Dict)\b|>>|<=|>=|==|!=|[{}()[\];,.:=+\-*/<>]/g;
+        const pieces = [];
+        let lastIndex = 0;
+        let match;
+
+        while ((match = pattern.exec(line)) !== null) {
+          if (match.index > lastIndex) {
+            pieces.push(escapeHtml(line.slice(lastIndex, match.index)));
+          }
+
+          const token = match[0];
+          let className = 'punct';
+
+          if (token.startsWith('//')) {
+            className = 'cmt';
+          } else if (/^"|^'/.test(token)) {
+            className = 'str';
+          } else if (/\b(?:global|class|pipeline|local|if|else|return|new|null|print)\b/.test(token)) {
+            className = 'kw';
+          } else if (/\b(?:Int|Float|String|Bool|Array|DataFrame|Dict)\b/.test(token)) {
+            className = 'type';
+          } else if (token === '>>') {
+            className = 'pipe-op';
+          } else if (/\d/.test(token)) {
+            className = 'num';
+          }
+
+          pieces.push(`<span class="${className}">${escapeHtml(token)}</span>`);
+          lastIndex = pattern.lastIndex;
+        }
+
+        if (lastIndex < line.length) {
+          pieces.push(escapeHtml(line.slice(lastIndex)));
+        }
+
+        return pieces.join('');
+      }
+
+      function syncEditorScroll() {
+        elements.syntaxLayer.scrollTop = elements.codeInput.scrollTop;
+        elements.syntaxLayer.scrollLeft = elements.codeInput.scrollLeft;
+      }
+
+      function updateCursorInfo() {
+        const position = elements.codeInput.selectionStart || 0;
+        const text = elements.codeInput.value.slice(0, position);
+        const lines = text.split(/\r?\n/);
+        const lineNumber = lines.length;
+        const columnNumber = lines[lines.length - 1].length + 1;
+        elements.cursorInfo.textContent = `Ln ${lineNumber}, Col ${columnNumber}`;
+      }
+
+      function getCursorLine() {
+        const position = elements.codeInput.selectionStart || 0;
+        const text = elements.codeInput.value.slice(0, position);
+        return text.split(/\r?\n/).length;
+      }
+
+      function summarizeDataset(value) {
+        if (value === null || value === undefined) {
+          return '0 rows';
+        }
+
+        if (Array.isArray(value)) {
+          const issueCount = countIssues(value);
+          return `${value.length} row${value.length === 1 ? '' : 's'}${issueCount ? ` · ${issueCount} issue${issueCount === 1 ? '' : 's'}` : ''}`;
+        }
+
+        if (typeof value === 'object') {
+          const keys = Object.keys(value);
+          return `${keys.length} field${keys.length === 1 ? '' : 's'}`;
+        }
+
+        return '1 value';
+      }
+
+      function countIssues(rows) {
+        return rows.reduce((total, row) => {
+          if (!row || typeof row !== 'object') {
+            return total;
+          }
+
+          const status = row.status;
+          if (typeof status === 'string') {
+            return status === 'ok' ? total : total + 1;
+          }
+
+          if (status && typeof status === 'object' && 'state' in status) {
+            return status.state === 'ok' ? total : total + 1;
+          }
+
+          return total;
+        }, 0);
+      }
+
+      function renderDataset(container, value, title, tone) {
+        if (value === null || value === undefined || (Array.isArray(value) && value.length === 0)) {
+          container.innerHTML = `<div class="empty-state">${escapeHtml(title)} is empty.</div>`;
+          return;
+        }
+
+        if (Array.isArray(value)) {
+          container.innerHTML = renderArrayTable(value, tone);
+          return;
+        }
+
+        if (typeof value === 'object') {
+          container.innerHTML = renderObjectTable(value);
+          return;
+        }
+
+        container.innerHTML = `<div class="empty-state">${escapeHtml(String(value))}</div>`;
+      }
+
+      function renderArrayTable(rows, tone) {
+        const firstRow = rows.find((row) => row && typeof row === 'object' && !Array.isArray(row));
+        if (!firstRow) {
+          const items = rows.map((item, index) => `<tr><td>${index + 1}</td><td>${formatCell(item, tone)}</td></tr>`).join('');
+          return `<table><thead><tr><th>#</th><th>value</th></tr></thead><tbody>${items}</tbody></table>`;
+        }
+
+        const columns = new Set();
+        rows.forEach((row) => {
+          if (row && typeof row === 'object' && !Array.isArray(row)) {
+            Object.keys(row).forEach((key) => columns.add(key));
+          }
+        });
+
+        const columnList = Array.from(columns);
+        const header = `<thead><tr><th>#</th>${columnList.map((key) => `<th>${escapeHtml(key)}</th>`).join('')}</tr></thead>`;
+        const body = rows.map((row, rowIndex) => {
+          if (!row || typeof row !== 'object' || Array.isArray(row)) {
+            return `<tr><td>${rowIndex + 1}</td>${columnList.map(() => '<td class="cell-muted">—</td>').join('')}</tr>`;
+          }
+
+          return `<tr><td>${rowIndex + 1}</td>${columnList.map((key) => `<td>${formatCell(row[key], tone, key)}</td>`).join('')}</tr>`;
+        }).join('');
+
+        return `<table>${header}<tbody>${body}</tbody></table>`;
+      }
+
+      function renderObjectTable(value) {
+        const rows = Object.entries(value).map(([key, item]) => `<tr><td>${escapeHtml(key)}</td><td>${formatCell(item)}</td></tr>`).join('');
+        return `<table><thead><tr><th>field</th><th>value</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+
+      function formatCell(value, tone, key) {
+        if (value === null || value === undefined) {
+          return '<span class="cell-null">null</span>';
+        }
+
+        if (typeof value === 'number') {
+          return tone === 'after' ? `<span class="cell-muted">${escapeHtml(String(value))}</span>` : escapeHtml(String(value));
+        }
+
+        if (typeof value === 'boolean') {
+          return escapeHtml(String(value));
+        }
+
+        if (typeof value === 'object') {
+          if (key === 'status' && value && typeof value === 'object' && value.state) {
+            return `<span class="flag ok"><span class="dot"></span>${escapeHtml(String(value.state))}</span>`;
+          }
+
+          return escapeHtml(JSON.stringify(value));
+        }
+
+        if (key === 'status') {
+          const statusClass = String(value).toLowerCase() === 'ok' ? 'ok' : 'neg';
+          return `<span class="flag ${statusClass}"><span class="dot"></span>${escapeHtml(String(value))}</span>`;
+        }
+
+        return escapeHtml(String(value));
+      }
+
+      function refreshConsole(lines) {
+        if (!Array.isArray(lines) || lines.length === 0) {
+          elements.console.innerHTML = '<div class="empty-console">console idle — no output yet</div>';
+          return;
+        }
+
+        elements.console.innerHTML = lines.map((line) => {
+          const level = line.level || 'info';
+          const tag = level.toUpperCase();
+          const message = escapeHtml(line.message || '');
+          return `<div class="console-line ${level}"><span class="tag">${tag}</span><span class="msg">${message}</span></div>`;
+        }).join('');
+      }
+
+      async function fetchJson(path, options) {
+        const response = await fetch(`${apiBase}${path}`, options);
+        if (!response.ok) {
+          throw new Error(await readErrorMessage(response));
+        }
+
+        return response.json();
+      }
+
+      async function readErrorMessage(response) {
+        const contentType = response.headers.get('content-type') || '';
+
+        try {
+          if (contentType.includes('application/json')) {
+            const body = await response.json();
+            if (body && typeof body === 'object') {
+              if (typeof body.detail === 'string') {
+                return body.detail;
+              }
+              return JSON.stringify(body);
+            }
+          }
+
+          const text = await response.text();
+          if (text) {
+            return text;
+          }
+        } catch (error) {
+          return `HTTP ${response.status}`;
+        }
+
+        return `HTTP ${response.status}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+    })();
+  </script>
+</body>
+</html>

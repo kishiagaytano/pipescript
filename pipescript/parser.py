@@ -4,7 +4,7 @@ from __future__ import annotations
 from .tokens import Token, TokenType
 from .ast_nodes import (
     Node, IntLiteral, FloatLiteral, StringLiteral, BoolLiteral, NullLiteral,
-    Identifier, ArrayLiteral, BinaryOp, UnaryOp, CastExpr, NewExpr,
+    Identifier, ArrayLiteral, DictLiteral, BinaryOp, UnaryOp, CastExpr, NewExpr,
     FuncCall, MemberAccess, PipelineExpr,
     VarDecl, AssignStmt, ExprStmt, IfStmt, ForStmt, WhileStmt, ReturnStmt,
     FuncDecl, ClassDecl, PipelineDecl, Program,
@@ -387,6 +387,8 @@ class Parser:
             return self._parse_cast()
         if self._check(TokenType.NEW):
             return self._parse_new()
+        if self._check(TokenType.LBRACE):
+            return self._parse_dict_literal()
         if self._check(TokenType.LBRACKET):
             return self._parse_array_literal()
         if self._check(TokenType.LPAREN):
@@ -428,6 +430,43 @@ class Parser:
                 elements.append(self._parse_expr())
         self._expect(TokenType.RBRACKET)
         return ArrayLiteral(elements=elements, line=line)
+
+    def _parse_dict_literal(self) -> DictLiteral:
+        line = self._cur.line
+        self._expect(TokenType.LBRACE)
+        entries = []
+        if not self._check(TokenType.RBRACE):
+            entries.append(self._parse_dict_entry())
+            while self._match(TokenType.COMMA):
+                if self._check(TokenType.RBRACE):
+                    break
+                entries.append(self._parse_dict_entry())
+        self._expect(TokenType.RBRACE)
+        return DictLiteral(entries=entries, line=line)
+
+    def _parse_dict_entry(self):
+        key = self._parse_dict_key()
+        self._expect(TokenType.COLON, "Expected ':' in dictionary entry")
+        value = self._parse_expr()
+        return (key, value)
+
+    def _parse_dict_key(self):
+        tok = self._cur
+        if self._match(TokenType.STRING_LIT):
+            return StringLiteral(value=tok.value, line=tok.line)
+        if self._match(TokenType.INT_LIT):
+            return IntLiteral(value=tok.value, line=tok.line)
+        if self._match(TokenType.FLOAT_LIT):
+            return FloatLiteral(value=tok.value, line=tok.line)
+        if self._match(TokenType.TRUE):
+            return BoolLiteral(value=True, line=tok.line)
+        if self._match(TokenType.FALSE):
+            return BoolLiteral(value=False, line=tok.line)
+        if self._match(TokenType.NULL):
+            return NullLiteral(line=tok.line)
+        if self._match(TokenType.IDENT):
+            return StringLiteral(value=tok.value, line=tok.line)
+        self._error(f"Expected a dictionary key, got '{tok.value}'")
 
     def _parse_ident_expr(self):
         line = self._cur.line

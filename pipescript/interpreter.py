@@ -45,6 +45,36 @@ def _make_builtins(log: List[str]) -> Dict[str, Any]:
         log.append(msg)
         return None
 
+    def _map_values(value, transform):
+        if isinstance(value, list):
+            return [_map_values(item, transform) for item in value]
+        if isinstance(value, dict):
+            return {key: _map_values(item, transform) for key, item in value.items()}
+        return transform(value)
+
+    def _remove_blanks(value):
+        if isinstance(value, list):
+            return [item for item in value if not (item is None or item == '' or str(item).lower() == 'null')]
+        if isinstance(value, dict):
+            return {key: _remove_blanks(item) for key, item in value.items()}
+        return value
+
+    def _remove_negatives(value):
+        if isinstance(value, list):
+            return [abs(item) if isinstance(item, (int, float)) and not isinstance(item, bool) and item < 0 else item for item in value]
+        if isinstance(value, dict):
+            return {key: _remove_negatives(item) for key, item in value.items()}
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and value < 0:
+            return abs(value)
+        return value
+
+    def _fill_null(value, default=0):
+        if isinstance(value, list):
+            return [default if item is None or item == '' else item for item in value]
+        if isinstance(value, dict):
+            return {key: _fill_null(item, default) for key, item in value.items()}
+        return default if value is None or value == '' else value
+
     return {
         # I/O
         'print':          _print,
@@ -72,13 +102,10 @@ def _make_builtins(log: List[str]) -> Dict[str, Any]:
         'isString':       lambda x: isinstance(x, str),
         'isBool':         lambda x: isinstance(x, bool),
         # Array / pipeline cleaning
-        'len':            lambda arr: len(arr) if isinstance(arr, list) else len(str(arr)),
-        'removeBlanks':   lambda arr: [x for x in arr
-                                       if x is not None and x != '' and str(x).lower() != 'null'],
-        'removeNegatives':lambda arr: [abs(x) if isinstance(x, (int, float)) and x < 0
-                                       else x for x in arr],
-        'fillNull':       lambda arr, default=0: [default if x is None or x == '' else x
-                                                   for x in arr],
+        'len':            lambda arr: len(arr) if isinstance(arr, (list, dict)) else len(str(arr)),
+        'removeBlanks':   lambda arr: _remove_blanks(arr),
+        'removeNegatives':lambda arr: _remove_negatives(arr),
+        'fillNull':       lambda arr, default=0: _fill_null(arr, default),
         'flatten':        lambda arr: [item for sub in arr
                                        for item in (sub if isinstance(sub, list) else [sub])],
         'unique':         lambda arr: list(dict.fromkeys(arr)),
@@ -249,6 +276,14 @@ class Interpreter:
         # ── Array literal ─────────────────────────────────────────────────
         if isinstance(node, ArrayLiteral):
             return [self._eval(el, scope) for el in node.elements]
+
+        # ── Dictionary literal ───────────────────────────────────────────
+        if isinstance(node, DictLiteral):
+            result: Dict[str, Any] = {}
+            for key_node, value_node in node.entries:
+                key_value = self._eval(key_node, scope)
+                result[str(key_value)] = self._eval(value_node, scope)
+            return result
 
         # ── Binary / unary operators ──────────────────────────────────────
         if isinstance(node, BinaryOp):

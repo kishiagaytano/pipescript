@@ -208,6 +208,8 @@ class Lexer:
                     self._tokens.append(Token(TokenType.SEMI,     ';', line, col))
                 elif ch == ',':
                     self._tokens.append(Token(TokenType.COMMA,    ',', line, col))
+                elif ch == ':':
+                    self._tokens.append(Token(TokenType.COLON,    ':', line, col))
                 elif ch == '.':
                     self._tokens.append(Token(TokenType.DOT,      '.', line, col))
                 else:

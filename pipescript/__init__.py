@@ -6,10 +6,15 @@ Quick start
 ───────────
     from pipescript import PipeScriptEngine
 
-    result = PipeScriptEngine().run(
-        code=open("my_script.ps").read(),
-        data=[25, -3, None, 17, ""]
-    )
+    code = '''
+    pipeline {
+        local Int[] messy_ages = [25, -3, null, 17, -9];
+        local Int[] cleaned = messy_ages >> removeNegatives() >> removeBlanks() >> fillNull(0);
+        cleaned;
+    }
+    '''
+
+    result = PipeScriptEngine().run(code=code)
 
     if result["success"]:
         print("Cleaned data:", result["output"])

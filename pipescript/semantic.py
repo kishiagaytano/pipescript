@@ -39,6 +39,7 @@ def _compatible(declared: str, actual: str) -> bool:
     if 'Any' in (declared, actual):     return True
     if declared == 'Float' and actual == 'Int': return True
     if actual == 'Array':               return True  # Int[] declared as Int but value is Array
+    if actual == 'Dict':                 return declared in ('Dict', 'Any')
     return False
 
 
@@ -217,6 +218,7 @@ class SemanticAnalyzer:
         if isinstance(node, BoolLiteral):   return 'Bool'
         if isinstance(node, NullLiteral):   return 'null'
         if isinstance(node, ArrayLiteral):  return 'Array'
+        if isinstance(node, DictLiteral):   return 'Dict'
 
         if isinstance(node, Identifier):
             t = self._lookup_type(node.name)

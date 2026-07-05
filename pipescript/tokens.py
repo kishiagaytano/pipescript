@@ -70,6 +70,7 @@ class TokenType(Enum):
     RBRACKET = auto()   # ]
     SEMI     = auto()   # ;
     COMMA    = auto()   # ,
+    COLON    = auto()   # :
     DOT      = auto()   # .
 
     # ── Special ──────────────────────────────────────────────

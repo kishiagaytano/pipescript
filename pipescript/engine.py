@@ -9,11 +9,31 @@
 #
 from __future__ import annotations
 import copy
+from .ast_nodes import (
+    ArrayLiteral,
+    AssignStmt,
+    BoolLiteral,
+    DictLiteral,
+    ExprStmt,
+    FloatLiteral,
+    Identifier,
+    IntLiteral,
+    PipelineExpr,
+    Program,
+    NullLiteral,
+    UnaryOp,
+    ReturnStmt,
+    StringLiteral,
+    VarDecl,
+)
 from .lexer       import Lexer,       LexerError
 from .parser      import Parser,      ParseError
 from .semantic    import SemanticAnalyzer
 from .interpreter import Interpreter, PipeScriptRuntimeError
 from typing import Any, Dict, List
+
+
+_MISSING = object()
 
 
 class PipeScriptEngine:
@@ -92,12 +112,16 @@ class PipeScriptEngine:
             result["errors"] = semantic_errors
             return result   # Don't run code that has type errors
 
+        inferred_data = data if data is not None else _infer_data_from_program(ast)
+        if inferred_data is not None:
+            result["before"] = _annotate_statuses(copy.deepcopy(inferred_data))
+
         # ── Phases 6–8: Interpretation ────────────────────────────────────
         try:
             interpreter      = Interpreter()
-            output           = interpreter.run(ast, input_data=data)
+            output           = interpreter.run(ast, input_data=inferred_data)
             result["success"]   = True
-            result["output"]    = _annotate_output(copy.deepcopy(data), _make_serialisable(output))
+            result["output"]    = _annotate_output(copy.deepcopy(inferred_data), _make_serialisable(output))
             result["print_log"] = interpreter.print_log
         except PipeScriptRuntimeError as exc:
             result["errors"].append({
@@ -131,6 +155,101 @@ def _make_serialisable(value: Any) -> Any:
     return value
 
 
+def _infer_data_from_program(program: Program) -> Any:
+    """Infer an in-script dataset from the first pipeline source or array binding."""
+    if program.pipeline is not None:
+        for stmt in program.pipeline.body:
+            pipeline_expr = _extract_pipeline_expr(stmt)
+            if pipeline_expr is None:
+                continue
+            source_value = _resolve_literal_source(program, pipeline_expr.source)
+            if source_value is not None:
+                return source_value
+
+    for decl in _iter_var_decls(program):
+        if decl.initializer is None:
+            continue
+        value = _resolve_literal_source(program, decl.initializer)
+        if value is not None:
+            return value
+
+    return None
+
+
+def _iter_var_decls(program: Program) -> List[VarDecl]:
+    decls: List[VarDecl] = []
+    decls.extend(program.globals)
+    if program.pipeline is not None:
+        for stmt in program.pipeline.body:
+            if isinstance(stmt, VarDecl):
+                decls.append(stmt)
+    return decls
+
+
+def _extract_pipeline_expr(stmt: Any) -> PipelineExpr | None:
+    if isinstance(stmt, VarDecl) and isinstance(stmt.initializer, PipelineExpr):
+        return stmt.initializer
+    if isinstance(stmt, AssignStmt) and isinstance(stmt.value, PipelineExpr):
+        return stmt.value
+    if isinstance(stmt, ExprStmt) and isinstance(stmt.expr, PipelineExpr):
+        return stmt.expr
+    if isinstance(stmt, ReturnStmt) and isinstance(stmt.value, PipelineExpr):
+        return stmt.value
+    return None
+
+
+def _resolve_literal_source(program: Program, node: Any, seen: set[str] | None = None) -> Any:
+    if seen is None:
+        seen = set()
+
+    if isinstance(node, ArrayLiteral):
+        return [_resolve_literal_source(program, element, seen) for element in node.elements]
+
+    if isinstance(node, DictLiteral):
+        resolved: Dict[str, Any] = {}
+        for key_node, value_node in node.entries:
+            key_value = _resolve_literal_source(program, key_node, seen)
+            value = _resolve_literal_source(program, value_node, seen)
+            resolved[str(key_value)] = value
+        return resolved
+
+    if isinstance(node, (IntLiteral, FloatLiteral, StringLiteral, BoolLiteral)):
+        return node.value
+
+    if isinstance(node, NullLiteral):
+        return None
+
+    if isinstance(node, Identifier):
+        if node.name in seen:
+            return None
+        seen.add(node.name)
+        decl = _find_var_decl(program, node.name)
+        if decl is None or decl.initializer is None:
+            return None
+        return _resolve_literal_source(program, decl.initializer, seen)
+
+    if isinstance(node, UnaryOp):
+        operand_value = _resolve_literal_source(program, node.operand, seen)
+        if node.op == '-' and isinstance(operand_value, (int, float)):
+            return -operand_value
+        if node.op == '!' and isinstance(operand_value, bool):
+            return not operand_value
+        return None
+
+    return None
+
+
+def _find_var_decl(program: Program, name: str) -> VarDecl | None:
+    if program.pipeline is not None:
+        for stmt in program.pipeline.body:
+            if isinstance(stmt, VarDecl) and stmt.name == name:
+                return stmt
+    for decl in program.globals:
+        if decl.name == name:
+            return decl
+    return None
+
+
 def _annotate_statuses(value: Any) -> Any:
     """Attach a simple row status to list-of-dict data points when possible."""
     if isinstance(value, list):
@@ -145,22 +264,31 @@ def _annotate_statuses(value: Any) -> Any:
 def _annotate_output(original: Any, value: Any) -> Any:
     """Annotate final output rows with what the pipeline likely did to them."""
     if isinstance(value, list):
-        original_items = _source_items_for_output(original)
         if value and all(isinstance(item, dict) for item in value):
+            original_items = original if isinstance(original, list) else []
             return [
                 _annotate_output_row(
-                    original_items[index] if index < len(original_items) and isinstance(original_items[index], dict) else None,
+                    original_items[index] if index < len(original_items) and isinstance(original_items[index], dict) else _MISSING,
                     item,
                 )
                 for index, item in enumerate(value)
             ]
-        return [
-            _wrap_output_item(original_items[index] if index < len(original_items) else None, item)
-            for index, item in enumerate(value)
-        ]
+        original_items = original if isinstance(original, list) else []
+        consumed_indices: set[int] = set()
+        annotated_items: List[Dict[str, Any]] = []
+        for item in value:
+            match_index = _match_original_list_item(original_items, item, consumed_indices)
+            original_item = original_items[match_index] if match_index is not None else _MISSING
+            if match_index is not None:
+                consumed_indices.add(match_index)
+            annotated_items.append(_wrap_output_item(original_item, item))
+        return annotated_items
     if isinstance(value, dict):
         original_dict = original if isinstance(original, dict) else {}
-        return {k: _annotate_output(original_dict.get(k), v) for k, v in value.items()}
+        return {
+            k: _annotate_output(original_dict[k] if k in original_dict else _MISSING, v)
+            for k, v in value.items()
+        }
     return _wrap_output_item(original, value)
 
 
@@ -172,6 +300,17 @@ def _source_items_for_output(original: Any) -> List[Any]:
     return [item for item in original if not _is_blank(item)]
 
 
+def _match_original_list_item(original_items: List[Any], value: Any, consumed_indices: set[int]) -> int | None:
+    for index, original_item in enumerate(original_items):
+        if index in consumed_indices:
+            continue
+        if original_item == value:
+            return index
+        if _is_negative(original_item) and value == abs(original_item):
+            return index
+    return None
+
+
 def _wrap_output_item(original_item: Any, value: Any) -> Dict[str, Any]:
     return {
         "value": _annotate_statuses(value),
@@ -179,8 +318,11 @@ def _wrap_output_item(original_item: Any, value: Any) -> Dict[str, Any]:
     }
 
 
-def _annotate_output_row(original_row: Dict[str, Any] | None, row: Dict[str, Any]) -> Dict[str, Any]:
-    annotated = {k: _annotate_output(original_row.get(k) if isinstance(original_row, dict) else None, v) for k, v in row.items()}
+def _annotate_output_row(original_row: Dict[str, Any] | object, row: Dict[str, Any]) -> Dict[str, Any]:
+    annotated = {
+        k: _annotate_output(original_row.get(k) if isinstance(original_row, dict) else _MISSING, v)
+        for k, v in row.items()
+    }
     annotated["status"] = _infer_output_status(original_row, row)
     return annotated
 
@@ -191,15 +333,19 @@ def _annotate_row(row: Dict[str, Any]) -> Dict[str, Any]:
     return annotated
 
 
-def _infer_output_status(original_row: Dict[str, Any] | None, row: Dict[str, Any]) -> Dict[str, Any]:
-    if original_row is None:
+def _infer_output_status(original_row: Dict[str, Any] | object, row: Any) -> Dict[str, Any]:
+    if original_row is _MISSING:
         return {"state": "generated", "implemented": ["generated"]}
 
     if not isinstance(row, dict):
         source_value = _row_source_value(original_row)
         if source_value is None:
-            return {"state": "generated", "implemented": ["generated"]}
+            if _is_blank(row):
+                return {"state": "ok", "implemented": []}
+            return {"state": "generated", "implemented": ["fillNull"]}
         if _is_blank(source_value):
+            if _is_blank(row):
+                return {"state": "ok", "implemented": []}
             return {"state": "generated", "implemented": ["fillNull"]}
         if _is_negative(source_value) and row == abs(source_value):
             return {"state": "cleaned", "implemented": ["removeNegatives"]}
@@ -209,6 +355,8 @@ def _infer_output_status(original_row: Dict[str, Any] | None, row: Dict[str, Any
 
     if not isinstance(original_row, dict):
         if _is_blank(original_row):
+            if _is_blank(row):
+                return {"state": "ok", "implemented": []}
             return {"state": "generated", "implemented": ["fillNull"]}
         if _is_negative(original_row) and row == abs(original_row):
             return {"state": "cleaned", "implemented": ["removeNegatives"]}

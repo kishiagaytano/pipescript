@@ -55,6 +55,11 @@ class ArrayLiteral(Node):
     elements: List[Any]   # List[Node]
 
 @dataclass
+class DictLiteral(Node):
+    """{ key: value, … }"""
+    entries: List[Tuple[Any, Any]]   # List[(Node, Node)]
+
+@dataclass
 class BinaryOp(Node):
     """left OP right  (arithmetic, relational, logical)"""
     op:    str

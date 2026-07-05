@@ -52,7 +52,16 @@ uvicorn
 ```python
 from pipescript import PipeScriptEngine
 
-result = PipeScriptEngine().run(code="...", data=[...])
+code = """
+pipeline {
+  local Dict record = { age: -2, name: "Ada", active: true, score: null };
+  local Dict cleaned = record >> removeNegatives() >> removeBlanks() >> fillNull(0);
+  print(cleaned);
+  cleaned;
+}
+"""
+
+result = PipeScriptEngine().run(code=code)
 ```
 
 ### Parameters
@@ -60,7 +69,7 @@ result = PipeScriptEngine().run(code="...", data=[...])
 | Parameter | Type | Description |
 |---|---|---|
 | `code` | `str` | The PipeScript source code the user typed in the editor |
-| `data` | `any` (optional) | Input dataset — injected as the variable `input_data` inside the script. Can be a list, list of dicts, or `None`. |
+| `data` | `any` (optional) | External input dataset — injected as the variable `input_data` inside the script when supplied. If the dataset is written directly in the script as an array or dict literal, the backend can infer it and `data` may be omitted. |
 
 ### Return value
 

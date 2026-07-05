@@ -43,16 +43,16 @@ app.add_middleware(
 # success example, the second its type-mismatch error example.
 EXAMPLES = [
     {
-        "name": "Clean negative & null ages",
-        "description": "removeNegatives() -> removeBlanks() -> fillNull(0) pipeline",
+        "name": "Clean dictionary records",
+        "description": "Code-only dict literal with removeNegatives() -> removeBlanks() -> fillNull(0)",
         "code": (
             "pipeline {\n"
-            "    local Int[] ages = [-3, 25, null, -10, 42];\n"
-            "    local Int[] cleaned = ages >> removeNegatives() >> removeBlanks() >> fillNull(0);\n"
+            "    local Dict record = { age: -2, name: \"Ada\", active: true, score: null };\n"
+            "    local Dict cleaned = record >> removeNegatives() >> removeBlanks() >> fillNull(0);\n"
             "    print(cleaned);\n"
+            "    cleaned;\n"
             "}\n"
         ),
-        "data": None,
     },
     {
         "name": "Type mismatch (error demo)",
@@ -63,7 +63,6 @@ EXAMPLES = [
             "    x = \"hello\";\n"
             "}\n"
         ),
-        "data": None,
     },
 ]
 

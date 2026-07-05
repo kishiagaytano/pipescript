@@ -640,8 +640,13 @@ pipeline main() {
       const state = {
         examples: [],
         currentData: null,
+        tokens: [],
         validationErrors: new Set(),
         validationSuccess: null,
+        validationStatus: 'idle',
+        validationTimer: null,
+        validationAbortController: null,
+        sourceRevision: 0,
         running: false,
         validating: false,
         lastActionMs: null,
@@ -662,6 +667,7 @@ pipeline main() {
         refreshConsole([{ level: 'info', message: 'Editor ready. Fetching backend status and examples…' }]);
         loadExamples();
         refreshHealth();
+        queueValidation(true);
         state.healthTimer = window.setInterval(refreshHealth, 15000);
       }
 
@@ -698,9 +704,20 @@ pipeline main() {
       }
 
       function handleEditorInput() {
-        state.validationErrors.clear();
+        state.sourceRevision += 1;
+        state.tokens = [];
+        state.validationErrors = new Set();
         state.validationSuccess = null;
-        elements.validationInfo.textContent = 'Validation idle';
+        state.validationStatus = elements.codeInput.value.trim() ? 'pending' : 'idle';
+        cancelQueuedValidation();
+
+        if (elements.codeInput.value.trim()) {
+          queueValidation(false);
+          elements.validationInfo.textContent = 'Validation pending…';
+        } else {
+          elements.validationInfo.textContent = 'Validation idle';
+        }
+
         renderEditor();
         updateCursorInfo();
       }
@@ -778,7 +795,7 @@ pipeline main() {
       }
 
       async function runProgram() {
-        if (state.running || state.validating) {
+        if (state.running) {
           return;
         }
 
@@ -810,6 +827,12 @@ pipeline main() {
 
           const elapsedMs = Math.round(performance.now() - startedAt);
           state.lastActionMs = elapsedMs;
+          state.tokens = Array.isArray(result.tokens) ? result.tokens : [];
+
+          const runErrorLines = collectErrorLines(result.errors);
+          state.validationErrors = runErrorLines;
+          state.validationSuccess = Boolean(result.success);
+          state.validationStatus = result.success ? 'valid' : 'invalid';
 
           renderDataset(elements.beforeTableWrap, result.before, 'Input data', 'before');
           renderDataset(elements.afterTableWrap, result.output, 'Cleaned output', 'after');
@@ -837,14 +860,8 @@ pipeline main() {
           }
 
           refreshConsole(logLines);
-          if (result.success) {
-            elements.validationInfo.textContent = 'Run succeeded';
-            state.validationErrors.clear();
-            state.validationSuccess = true;
-            renderEditor();
-          } else {
-            elements.validationInfo.textContent = 'Run returned backend errors';
-          }
+          elements.validationInfo.textContent = result.success ? 'Run succeeded' : 'Run returned backend errors';
+          renderEditor();
         } catch (error) {
           refreshConsole([{ level: 'error', message: `Run request failed: ${error.message}` }]);
           elements.beforeStatus.textContent = 'run failed';
@@ -859,7 +876,7 @@ pipeline main() {
       }
 
       async function validateProgram() {
-        if (state.running || state.validating) {
+        if (state.running) {
           return;
         }
 
@@ -869,63 +886,14 @@ pipeline main() {
           return;
         }
 
-        state.validating = true;
-        elements.validateBtn.classList.add('busy');
-        elements.validationInfo.textContent = 'Validating…';
-
-        const startedAt = performance.now();
-
-        try {
-          const result = await fetchJson('/validate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: elements.codeInput.value }),
-          });
-
-          const elapsedMs = Math.round(performance.now() - startedAt);
-          const errorLines = new Set();
-          const logLines = [];
-
-          if (Array.isArray(result.errors)) {
-            result.errors.forEach((error) => {
-              if (Number.isFinite(error.line)) {
-                errorLines.add(Number(error.line));
-              }
-              logLines.push({
-                level: 'error',
-                message: `${error.phase} error${error.line ? ` (line ${error.line})` : ''}: ${error.message}`,
-              });
-            });
-          }
-
-          if (result.success) {
-            logLines.unshift({ level: 'ok', message: `Validation passed in ${elapsedMs} ms` });
-          } else {
-            logLines.unshift({ level: 'warn', message: `Validation finished in ${elapsedMs} ms with issues` });
-          }
-
-          state.validationErrors = errorLines;
-          state.validationSuccess = Boolean(result.success);
-          renderEditor();
-          refreshConsole(logLines);
-
-          if (result.success) {
-            elements.validationInfo.textContent = `Validation passed · ${elapsedMs} ms`;
-          } else {
-            elements.validationInfo.textContent = `Validation failed · ${errorLines.size} issue${errorLines.size === 1 ? '' : 's'}`;
-          }
-        } catch (error) {
-          refreshConsole([{ level: 'error', message: `Validate request failed: ${error.message}` }]);
-          elements.validationInfo.textContent = 'Validation failed';
-        } finally {
-          state.validating = false;
-          elements.validateBtn.classList.remove('busy');
-        }
+        cancelQueuedValidation();
+        await performValidation(true);
       }
 
       function renderEditor() {
         const lines = elements.codeInput.value.split(/\r?\n/);
         const activeLine = getCursorLine();
+        const tokensByLine = groupTokensByLine(state.tokens);
         elements.syntaxLayer.innerHTML = lines.map((line, index) => {
           const lineNumber = index + 1;
           const classes = ['syntax-line'];
@@ -935,63 +903,273 @@ pipeline main() {
           if (state.validationErrors.has(lineNumber)) {
             classes.push('error');
           }
-          const rendered = highlightLine(line);
+          const rendered = renderTokenizedLine(line, tokensByLine.get(lineNumber) || []);
           const content = rendered.length ? rendered : '&nbsp;';
           return `<div class="${classes.join(' ')}"><span class="line-no">${lineNumber}</span><span class="code-fragment">${content}</span></div>`;
         }).join('');
 
-        if (state.validationSuccess === true) {
+        if (state.validationStatus === 'pending') {
+          elements.editorMode.textContent = 'validating…';
+        } else if (state.validationSuccess === true) {
           elements.editorMode.textContent = 'validated';
         } else if (state.validationErrors.size > 0) {
           elements.editorMode.textContent = 'validation issues';
-        } else if (!elements.exampleSelect.value) {
+        } else if (state.validationStatus === 'idle' && !elements.exampleSelect.value) {
           elements.editorMode.textContent = 'editable';
         }
 
         syncEditorScroll();
       }
 
-      function highlightLine(line) {
+      function groupTokensByLine(tokens) {
+        const grouped = new Map();
+
+        (Array.isArray(tokens) ? tokens : []).forEach((token) => {
+          if (!token || !Number.isFinite(token.line) || token.type === 'EOF') {
+            return;
+          }
+
+          const lineTokens = grouped.get(token.line) || [];
+          lineTokens.push(token);
+          grouped.set(token.line, lineTokens);
+        });
+
+        grouped.forEach((lineTokens) => {
+          lineTokens.sort((left, right) => {
+            if (left.col !== right.col) {
+              return left.col - right.col;
+            }
+            return String(left.type).localeCompare(String(right.type));
+          });
+        });
+
+        return grouped;
+      }
+
+      function renderTokenizedLine(line, tokens) {
         if (!line) {
           return '';
         }
 
-        const pattern = /\/\/.*$|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:global|class|pipeline|local|if|else|return|new|null|print)\b|\b(?:Int|Float|String|Bool|Array|DataFrame|Dict)\b|>>|<=|>=|==|!=|[{}()[\];,.:=+\-*/<>]/g;
-        const pieces = [];
-        let lastIndex = 0;
-        let match;
-
-        while ((match = pattern.exec(line)) !== null) {
-          if (match.index > lastIndex) {
-            pieces.push(escapeHtml(line.slice(lastIndex, match.index)));
-          }
-
-          const token = match[0];
-          let className = 'punct';
-
-          if (token.startsWith('//')) {
-            className = 'cmt';
-          } else if (/^"|^'/.test(token)) {
-            className = 'str';
-          } else if (/\b(?:global|class|pipeline|local|if|else|return|new|null|print)\b/.test(token)) {
-            className = 'kw';
-          } else if (/\b(?:Int|Float|String|Bool|Array|DataFrame|Dict)\b/.test(token)) {
-            className = 'type';
-          } else if (token === '>>') {
-            className = 'pipe-op';
-          } else if (/\d/.test(token)) {
-            className = 'num';
-          }
-
-          pieces.push(`<span class="${className}">${escapeHtml(token)}</span>`);
-          lastIndex = pattern.lastIndex;
+        if (!Array.isArray(tokens) || tokens.length === 0) {
+          return escapeHtml(line);
         }
 
-        if (lastIndex < line.length) {
-          pieces.push(escapeHtml(line.slice(lastIndex)));
+        const pieces = [];
+        let cursor = 0;
+
+        tokens.forEach((token, index) => {
+          const start = clampIndex((token.col || 1) - 1, line.length);
+          const nextToken = tokens[index + 1];
+          const nextStart = nextToken
+            ? clampIndex(Math.max((nextToken.col || 1) - 1, start), line.length)
+            : line.length;
+
+          if (cursor < start) {
+            pieces.push(escapeHtml(line.slice(cursor, start)));
+          }
+
+          const segment = line.slice(start, nextStart);
+          if (segment.length > 0) {
+            pieces.push(`<span class="${tokenClassName(token)}">${escapeHtml(segment)}</span>`);
+          }
+
+          cursor = nextStart;
+        });
+
+        if (cursor < line.length) {
+          pieces.push(escapeHtml(line.slice(cursor)));
         }
 
         return pieces.join('');
+      }
+
+      function tokenClassName(token) {
+        switch (token.type) {
+          case 'STRING_LIT':
+            return 'str';
+          case 'INT_LIT':
+          case 'FLOAT_LIT':
+            return 'num';
+          case 'TRUE':
+          case 'FALSE':
+          case 'NULL':
+          case 'PIPELINE':
+          case 'CLASS':
+          case 'NEW':
+          case 'IF':
+          case 'ELSE':
+          case 'FOR':
+          case 'WHILE':
+          case 'RETURN':
+          case 'GLOBAL':
+          case 'LOCAL':
+          case 'CAST':
+            return 'kw';
+          case 'T_INT':
+          case 'T_FLOAT':
+          case 'T_STRING':
+          case 'T_BOOL':
+            return 'type';
+          case 'PIPE':
+            return 'pipe-op';
+          case 'IDENT':
+            return 'fn';
+          default:
+            return 'punct';
+        }
+      }
+
+      function clampIndex(value, maxExclusive) {
+        return Math.max(0, Math.min(value, maxExclusive));
+      }
+
+      function queueValidation(immediate) {
+        clearTimeout(state.validationTimer);
+
+        if (!elements.codeInput.value.trim()) {
+          state.validationStatus = 'idle';
+          state.tokens = [];
+          state.validationErrors = new Set();
+          state.validationSuccess = null;
+          elements.validationInfo.textContent = 'Validation idle';
+          renderEditor();
+          return;
+        }
+
+        const delay = immediate ? 0 : 250;
+        state.validationTimer = window.setTimeout(() => {
+          performValidation(false);
+        }, delay);
+      }
+
+      function cancelQueuedValidation() {
+        clearTimeout(state.validationTimer);
+        state.validationTimer = null;
+
+        if (state.validationAbortController) {
+          state.validationAbortController.abort();
+          state.validationAbortController = null;
+        }
+      }
+
+      async function performValidation(announceInConsole) {
+        const source = elements.codeInput.value;
+        if (!source.trim()) {
+          state.validationStatus = 'idle';
+          state.tokens = [];
+          state.validationErrors = new Set();
+          state.validationSuccess = null;
+          elements.validationInfo.textContent = 'Validation idle';
+          renderEditor();
+          return;
+        }
+
+        const revision = state.sourceRevision;
+        const controller = new AbortController();
+        state.validationAbortController = controller;
+        state.validating = true;
+        state.validationStatus = 'pending';
+
+        if (announceInConsole) {
+          elements.validateBtn.classList.add('busy');
+          elements.validationInfo.textContent = 'Validating…';
+        } else {
+          elements.validationInfo.textContent = 'Validation pending…';
+        }
+
+        const startedAt = performance.now();
+
+        try {
+          const result = await fetchJson('/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: source }),
+            signal: controller.signal,
+          });
+
+          if (revision !== state.sourceRevision || state.validationAbortController !== controller) {
+            return;
+          }
+
+          const elapsedMs = Math.round(performance.now() - startedAt);
+          const errorLines = collectErrorLines(result.errors);
+          const logLines = [];
+
+          state.tokens = Array.isArray(result.tokens) ? result.tokens : [];
+          state.validationErrors = errorLines;
+          state.validationSuccess = Boolean(result.success);
+          state.validationStatus = result.success ? 'valid' : 'invalid';
+
+          if (announceInConsole) {
+            if (result.success) {
+              logLines.push({ level: 'ok', message: `Validation passed in ${elapsedMs} ms` });
+            } else {
+              logLines.push({ level: 'warn', message: `Validation finished in ${elapsedMs} ms with issues` });
+            }
+
+            if (Array.isArray(result.errors)) {
+              result.errors.forEach((error) => {
+                logLines.push({
+                  level: 'error',
+                  message: `${error.phase} error${error.line ? ` (line ${error.line})` : ''}: ${error.message}`,
+                });
+              });
+            }
+
+            refreshConsole(logLines);
+          }
+
+          renderEditor();
+          elements.validationInfo.textContent = result.success
+            ? `Validation passed · ${elapsedMs} ms`
+            : `Validation failed · ${errorLines.size} issue${errorLines.size === 1 ? '' : 's'}`;
+        } catch (error) {
+          if (error && error.name === 'AbortError') {
+            return;
+          }
+
+          if (revision !== state.sourceRevision) {
+            return;
+          }
+
+          state.tokens = [];
+          state.validationErrors = new Set();
+          state.validationSuccess = false;
+          state.validationStatus = 'error';
+          renderEditor();
+
+          if (announceInConsole) {
+            refreshConsole([{ level: 'error', message: `Validate request failed: ${error.message}` }]);
+          }
+
+          elements.validationInfo.textContent = 'Validation failed';
+        } finally {
+          if (state.validationAbortController === controller) {
+            state.validationAbortController = null;
+          }
+          state.validating = false;
+
+          if (announceInConsole) {
+            elements.validateBtn.classList.remove('busy');
+          }
+        }
+      }
+
+      function collectErrorLines(errors) {
+        const errorLines = new Set();
+
+        if (!Array.isArray(errors)) {
+          return errorLines;
+        }
+
+        errors.forEach((error) => {
+          if (error && Number.isFinite(error.line)) {
+            errorLines.add(Number(error.line));
+          }
+        });
+
+        return errorLines;
       }
 
       function syncEditorScroll() {

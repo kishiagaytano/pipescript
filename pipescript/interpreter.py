@@ -202,6 +202,22 @@ class Interpreter:
                     f"Cannot assign to '{stmt.name}' — variable is not declared.", stmt.line)
             return val
 
+        # ── Member field assignment  obj.field = expr ─────────────────────
+        if isinstance(stmt, MemberAssignStmt):
+            try:
+                instance = scope.lookup(stmt.obj)
+            except KeyError:
+                raise PipeScriptRuntimeError(
+                    f"Variable '{stmt.obj}' is not defined.", stmt.line)
+            if not isinstance(instance, PipeScriptInstance):
+                raise PipeScriptRuntimeError(
+                    f"'{stmt.obj}' is not a class instance — cannot assign field '{stmt.member}'.",
+                    stmt.line)
+            val = self._eval(stmt.value, scope)
+            instance.fields[stmt.member] = val
+            return val
+
+
         # ── Phase 6: if / else ────────────────────────────────────────────
         if isinstance(stmt, IfStmt):
             if self._truthy(self._eval(stmt.condition, scope)):

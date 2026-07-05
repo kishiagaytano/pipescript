@@ -126,6 +126,13 @@ class AssignStmt(Node):
     value: Any   # Node
 
 @dataclass
+class MemberAssignStmt(Node):
+    """obj.field = expr ;"""
+    obj:    str   # object variable name
+    member: str   # field name
+    value:  Any   # Node
+
+@dataclass
 class ExprStmt(Node):
     """A standalone expression (including a PipelineExpr) used as a statement."""
     expr: Any   # Node

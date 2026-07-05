@@ -162,6 +162,10 @@ class SemanticAnalyzer:
                             stmt.line
                         )
 
+        elif isinstance(stmt, MemberAssignStmt):
+            # Field assignment on a class instance — validate the RHS expression
+            self._infer(stmt.value)
+
         elif isinstance(stmt, IfStmt):
             cond_t = self._infer(stmt.condition)
             if cond_t and cond_t not in ('Bool', 'Any'):

@@ -6,7 +6,7 @@ from .ast_nodes import (
     Node, IntLiteral, FloatLiteral, StringLiteral, BoolLiteral, NullLiteral,
     Identifier, ArrayLiteral, DictLiteral, BinaryOp, UnaryOp, CastExpr, NewExpr,
     FuncCall, MemberAccess, PipelineExpr,
-    VarDecl, AssignStmt, ExprStmt, IfStmt, ForStmt, WhileStmt, ReturnStmt,
+    VarDecl, AssignStmt, MemberAssignStmt, ExprStmt, IfStmt, ForStmt, WhileStmt, ReturnStmt,
     FuncDecl, ClassDecl, PipelineDecl, Program,
 )
 from typing import List, Optional, Tuple
@@ -62,6 +62,25 @@ class Parser:
         TokenType.T_BOOL:   'Bool',
     }
 
+    _TYPE_TOKENS = {TokenType.T_INT, TokenType.T_FLOAT, TokenType.T_STRING,
+                    TokenType.T_BOOL, TokenType.IDENT}
+
+    def _is_func_decl(self) -> bool:
+        """Look ahead to detect:  <Type> ['[' ']']  <Ident>  '('
+        Distinguishes  Int clean(...)  from  Int x;  or  Int x = ...
+        """
+        if self._cur.type not in self._TYPE_TOKENS:
+            return False
+        off = 1
+        if self._peek(off).type == TokenType.LBRACKET:
+            if self._peek(off + 1).type == TokenType.RBRACKET:
+                off += 2
+            else:
+                return False
+        if self._peek(off).type != TokenType.IDENT:
+            return False
+        return self._peek(off + 1).type == TokenType.LPAREN
+
     def _parse_type(self) -> str:
         """Parse a type name, consuming an optional trailing [] array marker."""
         if self._cur.type in self._TYPE_MAP:
@@ -89,14 +108,14 @@ class Parser:
                 globals_.append(self._parse_global_decl())
             elif self._check(TokenType.CLASS):
                 classes.append(self._parse_class_decl())
-            elif self._check(TokenType.RETURN):
+            elif self._is_func_decl():
                 funcs.append(self._parse_func_decl())
             elif self._check(TokenType.PIPELINE):
                 pipeline = self._parse_pipeline_decl()
             else:
                 self._error(
                     f"Unexpected '{self._cur.value}' at top level. "
-                    "Expected: global, class, return, or pipeline."
+                    "Expected: global, class, a function declaration, or pipeline."
                 )
 
         return Program(line=1, globals=globals_, classes=classes,
@@ -121,7 +140,7 @@ class Parser:
         fields:  List[VarDecl]  = []
         methods: List[FuncDecl] = []
         while not self._check(TokenType.RBRACE, TokenType.EOF):
-            if self._check(TokenType.RETURN):
+            if self._is_func_decl():
                 methods.append(self._parse_func_decl())
             else:
                 fl = self._cur.line
@@ -137,8 +156,10 @@ class Parser:
         return ClassDecl(name=name, fields=fields, methods=methods, line=line)
 
     def _parse_func_decl(self) -> FuncDecl:
-        line = self._cur.line
-        self._expect(TokenType.RETURN)
+        """Syntax:  ReturnType name ( params ) { body }
+        e.g.  Int clean( Int value ) { return value; }
+        """
+        line        = self._cur.line
         return_type = self._parse_type()
         name        = self._expect(TokenType.IDENT, "Expected function name").value
         self._expect(TokenType.LPAREN)
@@ -192,7 +213,13 @@ class Parser:
             return self._parse_unscoped_decl()
         if self._check(TokenType.IDENT) and self._peek().type == TokenType.IDENT:
             return self._parse_unscoped_decl()
-        # Assignment
+        # Member field assignment: obj.field = expr;
+        if (self._check(TokenType.IDENT)
+                and self._peek(1).type == TokenType.DOT
+                and self._peek(2).type == TokenType.IDENT
+                and self._peek(3).type == TokenType.ASSIGN):
+            return self._parse_member_assign_stmt()
+        # Assignment: name = expr;
         if self._check(TokenType.IDENT) and self._peek().type == TokenType.ASSIGN:
             return self._parse_assign_stmt()
         return self._parse_expr_stmt()
@@ -227,6 +254,16 @@ class Parser:
         value = self._parse_expr()
         self._expect(TokenType.SEMI, "Expected ';' after assignment")
         return AssignStmt(name=name, value=value, line=line)
+
+    def _parse_member_assign_stmt(self) -> MemberAssignStmt:
+        line   = self._cur.line
+        obj    = self._advance().value
+        self._expect(TokenType.DOT)
+        member = self._expect(TokenType.IDENT).value
+        self._expect(TokenType.ASSIGN)
+        value  = self._parse_expr()
+        self._expect(TokenType.SEMI, "Expected ';' after member assignment")
+        return MemberAssignStmt(obj=obj, member=member, value=value, line=line)
 
     def _parse_if_stmt(self) -> IfStmt:
         line = self._cur.line

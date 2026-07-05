@@ -183,6 +183,13 @@ class Parser:
     def _parse_pipeline_decl(self) -> PipelineDecl:
         line = self._cur.line
         self._expect(TokenType.PIPELINE)
+        # Optional name + parameter list: pipeline main() { ... }
+        if self._check(TokenType.IDENT):
+            self._advance()                        # consume name
+            if self._match(TokenType.LPAREN):      # consume ()
+                while not self._check(TokenType.RPAREN, TokenType.EOF):
+                    self._advance()
+                self._expect(TokenType.RPAREN)
         body = self._parse_block()
         return PipelineDecl(body=body, line=line)
 

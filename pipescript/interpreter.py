@@ -386,18 +386,29 @@ class Interpreter:
     def _eval_pipeline(self, node: PipelineExpr, scope: SymbolTable) -> Any:
         """
         Evaluate  source >> step1() >> step2() …
-        The result of each step becomes the *first* argument of the next call.
+
+        Threading rules:
+        - Built-in functions always receive the accumulated value as-is (they are
+          designed to operate on arrays, e.g. removeBlanks, sort).
+        - User-defined functions and instance methods receive the accumulated value
+          as-is UNLESS it is a list, in which case the call is mapped over each
+          element and a new list is collected.  This lets clean(Int v) work
+          naturally inside  data >> clean()  without the caller looping manually.
         """
         result = self._eval(node.source, scope)
 
         for step in node.steps:
             if isinstance(step, FuncCall):
-                # Extra arguments after the piped value
                 extra_args = [self._eval(a, scope) for a in step.args]
-                result = self._call(step.name, [result] + extra_args, scope, step.line)
+                # Map user-defined functions over list elements; builtins get the whole value
+                if step.name in self._func_defs and isinstance(result, list):
+                    result = [self._call(step.name, [item] + extra_args, scope, step.line)
+                              for item in result]
+                else:
+                    result = self._call(step.name, [result] + extra_args, scope, step.line)
 
             elif isinstance(step, MemberAccess):
-                # obj.method(args) — piped value is first argument
+                extra_args = [self._eval(a, scope) for a in (step.call_args or [])]
                 if scope.is_defined(step.obj):
                     obj = scope.lookup(step.obj)
                     if isinstance(obj, PipeScriptInstance):
@@ -405,13 +416,15 @@ class Interpreter:
                         if method is None:
                             raise PipeScriptRuntimeError(
                                 f"Class '{obj.class_name}' has no method '{step.member}'.", step.line)
-                        extra_args = [self._eval(a, scope) for a in (step.call_args or [])]
-                        result = self._call_method(obj, method, [result] + extra_args, step.line)
+                        # Map method over list elements
+                        if isinstance(result, list):
+                            result = [self._call_method(obj, method, [item] + extra_args, step.line)
+                                      for item in result]
+                        else:
+                            result = self._call_method(obj, method, [result] + extra_args, step.line)
                     else:
-                        extra_args = [self._eval(a, scope) for a in (step.call_args or [])]
                         result = self._call(step.member, [result] + extra_args, scope, step.line)
                 else:
-                    extra_args = [self._eval(a, scope) for a in (step.call_args or [])]
                     result = self._call(step.member, [result] + extra_args, scope, step.line)
 
             elif isinstance(step, Identifier):

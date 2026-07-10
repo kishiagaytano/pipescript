@@ -180,6 +180,8 @@ class Lexer:
                 elif ch == '>':
                     if self._match_next('>'):
                         self._tokens.append(Token(TokenType.PIPE, '>>', line, col))
+                    elif self._match_next('='):
+                        self._tokens.append(Token(TokenType.GTE, '>=', line, col))
                     else:
                         self._tokens.append(Token(TokenType.GT, '>', line, col))
                 elif ch == '&':

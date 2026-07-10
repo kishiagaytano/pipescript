@@ -1,0 +1,6 @@
+# PipeScript backend dependencies (Python 3.10+)
+# The pipescript/ compiler package itself is pure standard library —
+# these are only needed to run the FastAPI server in main.py.
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.6

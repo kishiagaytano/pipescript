@@ -1,0 +1,1553 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PipeScript — Final Project Presentation</title>
+</head>
+
+<body>
+  <title>PipeScript — Final Project Presentation</title>
+  <style>
+    :root {
+      /* Data Schematic palette — light */
+      --bg: #E6EAEF;
+      --surface: #F7F9FB;
+      --surface-2: #EEF2F6;
+      --ink: #131A24;
+      --ink-soft: #4B5763;
+      --ink-faint: #7C8794;
+      --line: #D3DAE1;
+      --accent: #E0771E;
+      /* pipe orange — the >> */
+      --accent-ink: #B55A11;
+      --steel: #2A6E8C;
+      /* structural cool */
+      --good: #2C8A5E;
+      --bad: #C63D33;
+      --gold: #A9791E;
+      /* code tokens */
+      --c-key: var(--steel);
+      --c-ty: var(--steel);
+      --c-pipe: var(--accent);
+      --c-str: var(--gold);
+      --c-num: var(--good);
+      --c-com: var(--ink-faint);
+      --c-fn: var(--ink);
+      --c-punc: var(--ink-soft);
+
+      --mono: "Cascadia Code", "Cascadia Mono", "JetBrains Mono", "SF Mono", "Consolas", ui-monospace, monospace;
+      --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0B111A;
+        --surface: #121A26;
+        --surface-2: #16202E;
+        --ink: #E9EEF3;
+        --ink-soft: #9AA9B8;
+        --ink-faint: #64717F;
+        --line: #253243;
+        --accent: #F7924A;
+        --accent-ink: #F7924A;
+        --steel: #67ABCB;
+        --good: #57C08A;
+        --bad: #E9695E;
+        --gold: #DDB268;
+        --c-fn: var(--ink);
+      }
+    }
+
+    :root[data-theme="light"] {
+      --bg: #E6EAEF;
+      --surface: #F7F9FB;
+      --surface-2: #EEF2F6;
+      --ink: #131A24;
+      --ink-soft: #4B5763;
+      --ink-faint: #7C8794;
+      --line: #D3DAE1;
+      --accent: #E0771E;
+      --accent-ink: #B55A11;
+      --steel: #2A6E8C;
+      --good: #2C8A5E;
+      --bad: #C63D33;
+      --gold: #A9791E;
+      --c-fn: var(--ink);
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0B111A;
+      --surface: #121A26;
+      --surface-2: #16202E;
+      --ink: #E9EEF3;
+      --ink-soft: #9AA9B8;
+      --ink-faint: #64717F;
+      --line: #253243;
+      --accent: #F7924A;
+      --accent-ink: #F7924A;
+      --steel: #67ABCB;
+      --good: #57C08A;
+      --bad: #E9695E;
+      --gold: #DDB268;
+      --c-fn: var(--ink);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* ── Deck shell ─────────────────────────────────────────── */
+    .deck {
+      position: fixed;
+      inset: 0;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(48px, 6vh, 76px) clamp(28px, 6vw, 96px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .38s ease;
+      overflow-y: auto;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide {
+        transition: none;
+      }
+    }
+
+    .stage {
+      width: 100%;
+      max-width: 1120px;
+      margin: auto;
+      transform: translateY(8px);
+      transition: transform .42s cubic-bezier(.2, .7, .2, 1);
+    }
+
+    .slide.active .stage {
+      transform: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stage {
+        transform: none;
+      }
+    }
+
+    /* ── Persistent chrome ──────────────────────────────────── */
+    .brand {
+      position: fixed;
+      top: 22px;
+      left: clamp(20px, 4vw, 52px);
+      z-index: 40;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 14px;
+      letter-spacing: .02em;
+      color: var(--ink-soft);
+    }
+
+    .brand b {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .brand .gt {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .counter {
+      position: fixed;
+      top: 22px;
+      right: clamp(20px, 4vw, 52px);
+      z-index: 40;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-faint);
+      letter-spacing: .05em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .nav-btn {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 40;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface) 70%, transparent);
+      color: var(--ink-soft);
+      font-size: 20px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      backdrop-filter: blur(6px);
+      transition: color .15s, border-color .15s, background .15s;
+    }
+
+    .nav-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .nav-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .nav-prev {
+      left: clamp(10px, 2vw, 22px);
+    }
+
+    .nav-next {
+      right: clamp(10px, 2vw, 22px);
+    }
+
+    /* phase rail */
+    .rail {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .rail .seg {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--ink-faint);
+      transition: color .3s;
+    }
+
+    .rail .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      background: var(--line);
+      transition: background .3s, box-shadow .3s;
+    }
+
+    .rail .seg.done .dot {
+      background: var(--ink-faint);
+    }
+
+    .rail .seg.on .dot {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+
+    .rail .seg.on {
+      color: var(--accent);
+    }
+
+    .rail .bar {
+      width: 12px;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .notes {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 45;
+      background: var(--ink);
+      color: var(--surface);
+      padding: 14px clamp(20px, 5vw, 60px);
+      font-size: 15px;
+      line-height: 1.5;
+      transform: translateY(101%);
+      transition: transform .25s ease;
+      border-top: 3px solid var(--accent);
+    }
+
+    .notes.show {
+      transform: none;
+    }
+
+    .notes b {
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* ── Typography ─────────────────────────────────────────── */
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: clamp(12px, 1.3vw, 14px);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      margin: 0 0 18px;
+      font-weight: 600;
+    }
+
+    .eyebrow.steel {
+      color: var(--steel);
+    }
+
+    h1 {
+      font-size: clamp(38px, 7vw, 78px);
+      line-height: .98;
+      margin: 0;
+      letter-spacing: -.02em;
+      font-weight: 800;
+      text-wrap: balance;
+    }
+
+    h2 {
+      font-size: clamp(28px, 4.4vw, 50px);
+      line-height: 1.04;
+      margin: 0 0 20px;
+      letter-spacing: -.018em;
+      font-weight: 750;
+      text-wrap: balance;
+    }
+
+    .lead {
+      font-size: clamp(17px, 2vw, 22px);
+      line-height: 1.5;
+      color: var(--ink-soft);
+      max-width: 60ch;
+      margin: 0;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .muted {
+      color: var(--ink-soft);
+    }
+
+    .faint {
+      color: var(--ink-faint);
+    }
+
+    /* ── Building blocks ────────────────────────────────────── */
+    pre {
+      font-family: var(--mono);
+      margin: 0;
+      font-size: clamp(13px, 1.55vw, 17px);
+      line-height: 1.65;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px 22px;
+      overflow-x: auto;
+      tab-size: 2;
+    }
+
+    pre.tight {
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: var(--mono);
+    }
+
+    .k {
+      color: var(--c-key);
+      font-weight: 600;
+    }
+
+    .ty {
+      color: var(--c-ty);
+      font-weight: 600;
+    }
+
+    .op {
+      color: var(--c-pipe);
+      font-weight: 700;
+    }
+
+    .str {
+      color: var(--c-str);
+    }
+
+    .num {
+      color: var(--c-num);
+    }
+
+    .cm {
+      color: var(--c-com);
+      font-style: italic;
+    }
+
+    .fn {
+      color: var(--c-fn);
+    }
+
+    .pu {
+      color: var(--c-punc);
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(20px, 3vw, 44px);
+      align-items: center;
+    }
+
+    .grid2.top {
+      align-items: start;
+    }
+
+    @media (max-width: 760px) {
+      .grid2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tenets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 26px;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 760px) {
+      .tenets {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tenet {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .tenet .n {
+      font-family: var(--mono);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      padding-top: 3px;
+    }
+
+    .tenet .t {
+      font-weight: 700;
+    }
+
+    .tenet .d {
+      color: var(--ink-soft);
+      font-size: 15px;
+    }
+
+    ul.checks {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    ul.checks li {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      font-size: clamp(15px, 1.7vw, 18px);
+    }
+
+    ul.checks li::before {
+      content: "✕";
+      color: var(--bad);
+      font-family: var(--mono);
+      font-weight: 700;
+    }
+
+    ul.checks.pos li::before {
+      content: "✓";
+      color: var(--good);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      font-family: var(--mono);
+      font-size: clamp(12px, 1.4vw, 15px);
+      padding: 6px 11px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      white-space: nowrap;
+    }
+
+    .chip .v {
+      color: var(--ink-faint);
+    }
+
+    .chip.pipe {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    }
+
+    .chip.arrow {
+      border: none;
+      background: none;
+      color: var(--ink-faint);
+      padding: 6px 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: clamp(18px, 2.4vw, 26px);
+    }
+
+    .card.bad {
+      border-left: 4px solid var(--bad);
+    }
+
+    .card.good {
+      border-left: 4px solid var(--good);
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      font-family: var(--mono);
+      letter-spacing: .02em;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 16px;
+      font-size: 15px;
+    }
+
+    .kv dt {
+      font-family: var(--mono);
+      color: var(--steel);
+      font-weight: 600;
+    }
+
+    .kv dd {
+      margin: 0;
+      color: var(--ink-soft);
+    }
+
+    /* AST / scope trees */
+    .tree {
+      font-family: var(--mono);
+      font-size: clamp(13px, 1.5vw, 16px);
+      line-height: 1.85;
+    }
+
+    .tree .node {
+      color: var(--steel);
+      font-weight: 600;
+    }
+
+    .tree .leaf {
+      color: var(--ink);
+    }
+
+    .tree .br {
+      color: var(--ink-faint);
+    }
+
+    .scope {
+      display: grid;
+      gap: 0;
+      font-family: var(--mono);
+    }
+
+    .scope .frame {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: var(--surface);
+      margin-left: var(--i, 0);
+      position: relative;
+    }
+
+    .scope .frame+.frame {
+      margin-top: -1px;
+    }
+
+    .scope .lbl {
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: .06em;
+    }
+
+    .scope .var {
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    .scope .var .t {
+      color: var(--steel);
+    }
+
+    .matrix {
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 14px;
+    }
+
+    .matrix th,
+    .matrix td {
+      border: 1px solid var(--line);
+      padding: 8px 14px;
+      text-align: center;
+    }
+
+    .matrix th {
+      color: var(--steel);
+      font-weight: 700;
+      background: var(--surface-2);
+    }
+
+    .matrix td {
+      color: var(--ink-soft);
+    }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 6px;
+      font-family: var(--mono);
+      font-weight: 700;
+    }
+
+    .flow .st {
+      padding: 9px 15px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      font-size: clamp(13px, 1.6vw, 17px);
+    }
+
+    .flow .st .p {
+      display: block;
+      font-size: 10px;
+      color: var(--ink-faint);
+      font-weight: 600;
+      letter-spacing: .08em;
+    }
+
+    .flow .st.src {
+      border-style: dashed;
+      color: var(--ink-soft);
+    }
+
+    .flow .st.res {
+      border-color: var(--good);
+      color: var(--good);
+    }
+
+    .flow .gt {
+      color: var(--accent);
+      font-size: clamp(16px, 2vw, 22px);
+    }
+
+    .foot {
+      margin-top: 30px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-faint);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 18px;
+    }
+
+    .foot .ph {
+      color: var(--accent);
+    }
+
+    .ph-holder {
+      color: var(--accent-ink);
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      padding: 1px 7px;
+      border-radius: 5px;
+    }
+
+    /* ── Title-card slides (inverted) ───────────────────────── */
+    .slide.card-demo,
+    .slide.card-roles,
+    .slide.card-hook,
+    .slide.card-close {
+      color: #fff;
+    }
+
+    .slide.card-demo {
+      background: linear-gradient(140deg, #10161F 0%, #1a1207 60%, #2a1a06 100%);
+    }
+
+    .slide.card-roles {
+      background: linear-gradient(140deg, #0C1620 0%, #0d2530 70%, #0e2c3a 100%);
+    }
+
+    .slide.card-hook {
+      background: radial-gradient(120% 130% at 20% 0%, #172230 0%, #0C1119 55%, #0A0E15 100%);
+    }
+
+    .slide.card-close {
+      background: radial-gradient(120% 130% at 80% 100%, #22160a 0%, #0f1219 55%, #0A0E15 100%);
+    }
+
+    .card-demo .eyebrow {
+      color: #F7924A;
+    }
+
+    .card-roles .eyebrow {
+      color: #67ABCB;
+    }
+
+    .card-hook .eyebrow,
+    .card-close .eyebrow {
+      color: #F7924A;
+    }
+
+    .card-demo .lead,
+    .card-roles .lead,
+    .card-hook .lead,
+    .card-close .lead {
+      color: rgba(255, 255, 255, .72);
+    }
+
+    .card-demo .faint,
+    .card-roles .faint,
+    .card-hook .faint,
+    .card-close .faint {
+      color: rgba(255, 255, 255, .5);
+    }
+
+    .card-hook h1 {
+      font-size: clamp(52px, 11vw, 132px);
+    }
+
+    .bigpipe {
+      font-family: var(--mono);
+      font-weight: 800;
+      font-size: clamp(40px, 9vw, 104px);
+      letter-spacing: -.03em;
+      display: inline-flex;
+      align-items: center;
+      gap: .2em;
+    }
+
+    .bigpipe .gt {
+      color: #F7924A;
+    }
+
+    .bigpipe .flow-anim {
+      position: relative;
+    }
+
+    .demo-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 26px;
+    }
+
+    .demo-list .d {
+      font-family: var(--mono);
+      font-size: 15px;
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .04);
+    }
+
+    .demo-list .d span {
+      color: #F7924A;
+      font-weight: 700;
+    }
+
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 26px;
+      max-width: 760px;
+    }
+
+    @media (max-width:640px) {
+      .roles-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .roles-grid .r {
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 10px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, .03);
+    }
+
+    .roles-grid .r .role {
+      font-family: var(--mono);
+      color: #67ABCB;
+      font-size: 13px;
+      letter-spacing: .04em;
+    }
+
+    .roles-grid .r .who {
+      font-size: 17px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .hint {
+      position: fixed;
+      bottom: 46px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-faint);
+      opacity: .8;
+      transition: opacity .4s;
+    }
+
+    .hint.hide {
+      opacity: 0;
+    }
+
+    kbd {
+      font-family: var(--mono);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 11px;
+      color: var(--ink-soft);
+    }
+
+    @media (max-width: 560px) {
+
+      .brand,
+      .rail {
+        display: none;
+      }
+    }
+  </style>
+
+  <div class="brand"><b>Pipe<span class="gt">&gt;&gt;</span>Script</b> <span>Final Project</span></div>
+  <div class="counter" id="counter">01 / 19</div>
+
+  <div class="deck" id="deck">
+
+    <!-- 1 · HOOK -->
+    <section class="slide card-hook" data-rail="off">
+      <div class="stage">
+        <p class="eyebrow">FEU Institute of Technology · Programming Languages</p>
+        <h1>Pipe<span style="color:#F7924A">&gt;&gt;</span>Script</h1>
+        <p class="lead"
+          style="margin-top:24px; font-size:clamp(20px,2.6vw,30px); color:#fff; max-width:22ch; font-weight:600;">Most
+          data code isn't logic.<br>It's cleanup.</p>
+        <p class="faint" style="margin-top:20px; max-width:52ch;">A minimal, typed language built around one idea — data
+          should <em>flow</em> through the operations that clean it.</p>
+        <div class="foot" style="margin-top:44px; color:rgba(255,255,255,.5)">
+          <span class="ph-holder" style="background:rgba(247,146,74,.14); color:#F7924A;">&lt;Badilla | Gaytano |
+            Lastrollo | Regalado&gt;</span>
+          <span class="ph-holder" style="background:rgba(247,146,74,.14); color:#F7924A;">&lt;TS31&gt;</span>
+          <span class="ph-holder" style="background:rgba(247,146,74,.14); color:#F7924A;">&lt;July&gt;</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · PROBLEM -->
+    <section class="slide">
+      <div class="stage">
+        <p class="eyebrow">The Problem</p>
+        <div class="grid2">
+          <div>
+            <h2>Every dataset shows up dirty.</h2>
+            <p class="lead">Negatives that should be positive. Nulls and blanks. Values in the wrong type. Before a
+              single insight, you spend your time <strong>cleaning</strong>.</p>
+            <p class="muted" style="margin-top:18px;">And it's always the <em>same</em> handful of steps, in the same
+              order — repetitive, sequential, boilerplate.</p>
+          </div>
+          <div class="card">
+            <h3 class="faint">raw ages</h3>
+            <pre
+              class="tight">[ <span class="num">25</span>, <span class="bad">-3</span>, <span class="bad">null</span>, <span class="num">41</span>, <span class="bad">-9</span>, <span class="bad">null</span> ]</pre>
+            <div class="chips" style="margin-top:14px;">
+              <span class="chip" style="border-color:var(--bad);color:var(--bad)">✕ negatives</span>
+              <span class="chip" style="border-color:var(--bad);color:var(--bad)">✕ nulls</span>
+              <span class="chip" style="border-color:var(--bad);color:var(--bad)">✕ unsorted</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · FRICTION -->
+    <section class="slide">
+      <div class="stage">
+        <p class="eyebrow">The Friction</p>
+        <h2>General-purpose tools are overkill for a five-step cleanup.</h2>
+        <div class="grid2 top" style="margin-top:8px;">
+          <div class="card good">
+            <h3 style="color:var(--good)">The intent</h3>
+            <p class="muted" style="line-height:1.9">remove negatives &nbsp;→&nbsp; drop nulls &nbsp;→&nbsp; fill
+              defaults &nbsp;→&nbsp; sort</p>
+            <p class="faint" style="margin-top:10px;font-size:14px">A straight line. Four steps.</p>
+          </div>
+          <div class="card bad">
+            <h3 style="color:var(--bad)">The ceremony</h3>
+            <pre class="tight" style="font-size:13px"><span class="k">import</span> pandas <span class="k">as</span> pd
+df = pd.DataFrame(...)
+df = df[df.age &gt;= <span class="num">0</span>]
+df = df.dropna()
+df = df.fillna(<span class="num">0</span>)
+df = df.sort_values(...).reset_index()</pre>
+          </div>
+        </div>
+        <p class="lead" style="margin-top:22px;">The task is a straight line. The code shouldn't zig-zag.</p>
+      </div>
+    </section>
+
+    <!-- 4 · SOLUTION -->
+    <section class="slide">
+      <div class="stage">
+        <p class="eyebrow">The Solution</p>
+        <h2>PipeScript makes the straight line the syntax.</h2>
+        <pre
+          style="margin-top:8px; font-size:clamp(15px,2.1vw,24px)"><span class="k">local</span> <span class="ty">Int[]</span> <span class="fn">clean</span> = ages <span class="op">&gt;&gt;</span> <span class="fn">removeNegatives</span>() <span class="op">&gt;&gt;</span> <span class="fn">fillNull</span>(<span class="num">0</span>) <span class="op">&gt;&gt;</span> <span class="fn">sort</span>();</pre>
+        <div class="grid2 top" style="margin-top:24px;">
+          <p class="lead">Read it left to right. Each stage's output becomes the next stage's input. The <span
+              class="op" style="font-family:var(--mono)">&gt;&gt;</span> operator is the whole language's spine.</p>
+          <div class="chips">
+            <span class="chip pipe">40+ built-in cleaning verbs</span>
+            <span class="chip">no imports</span>
+            <span class="chip">statically typed</span>
+            <span class="chip">reads like the intent</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 · PHASE 1 : DESIGN -->
+    <section class="slide" data-phase="1">
+      <div class="stage">
+        <p class="eyebrow">Phase 1 · Language Design</p>
+        <h2>A small language with a strong opinion.</h2>
+        <div class="tenets">
+          <div class="tenet"><span class="n">01</span>
+            <div>
+              <div class="t">Purpose</div>
+              <div class="d">Data cleaning &amp; transformation pipelines.</div>
+            </div>
+          </div>
+          <div class="tenet"><span class="n">02</span>
+            <div>
+              <div class="t">Signature</div>
+              <div class="d">The <span class="op" style="font-family:var(--mono)">&gt;&gt;</span> operator — lowest
+                precedence, so it flows over everything.</div>
+            </div>
+          </div>
+          <div class="tenet"><span class="n">03</span>
+            <div>
+              <div class="t">Statically typed</div>
+              <div class="d">Int, Float, Bool, String — plus Array &amp; Dict.</div>
+            </div>
+          </div>
+          <div class="tenet"><span class="n">04</span>
+            <div>
+              <div class="t">Familiar C-style</div>
+              <div class="d">Braces, semicolons, <code>if</code>/<code>for</code>/<code>while</code>.</div>
+            </div>
+          </div>
+          <div class="tenet"><span class="n">05</span>
+            <div>
+              <div class="t">Batteries included</div>
+              <div class="d">Cleaning verbs ship with the language.</div>
+            </div>
+          </div>
+          <div class="tenet"><span class="n">06</span>
+            <div>
+              <div class="t">One entry point</div>
+              <div class="d">The <code>pipeline { }</code> block runs the program.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · ANATOMY -->
+    <section class="slide">
+      <div class="stage">
+        <p class="eyebrow">Program Structure</p>
+        <h2>Anatomy of a PipeScript program</h2>
+        <div class="grid2 top">
+          <pre><span class="k">global</span> <span class="ty">Int</span> <span class="fn">passingScore</span> = <span class="num">50</span>;
+
+<span class="k">class</span> <span class="ty">Grader</span> {
+  <span class="ty">String</span> <span class="fn">evaluate</span>(<span class="ty">Int</span> score) {
+    <span class="k">if</span> (score &lt; passingScore) { <span class="k">return</span> <span class="str">"FAIL"</span>; }
+    <span class="k">return</span> <span class="str">"PASS"</span>;
+  }
+}
+
+<span class="k">pipeline</span> {
+  <span class="k">local</span> <span class="ty">Int[]</span> scores = [<span class="num">72</span>, <span class="num">40</span>, <span class="num">88</span>];
+  <span class="ty">Grader</span> g = <span class="k">new</span> <span class="ty">Grader</span>();
+  scores <span class="op">&gt;&gt;</span> g.<span class="fn">evaluate</span>();
+}</pre>
+          <div>
+            <dl class="kv">
+              <dt>global</dt>
+              <dd>Program-wide constants &amp; state.</dd>
+              <dt>class</dt>
+              <dd>Data + behaviour (Phase 8).</dd>
+              <dt>pipeline</dt>
+              <dd>The single execution block.</dd>
+              <dt>local</dt>
+              <dd>Block-scoped declarations.</dd>
+              <dt>&gt;&gt;</dt>
+              <dd>Feed a value through a stage.</dd>
+            </dl>
+            <p class="faint" style="margin-top:18px;font-size:14px">Top-level order is free: globals, classes,
+              functions, and one pipeline.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 · ARCHITECTURE -->
+    <section class="slide">
+      <div class="stage">
+        <p class="eyebrow">Under the Hood · Architecture</p>
+        <h2>The interpreter is, itself, a pipeline.</h2>
+        <div class="flow" style="margin:22px 0 8px;">
+          <span class="st src">source<span class="p">.ps text</span></span>
+          <span class="gt">&gt;&gt;</span>
+          <span class="st">Lexer<span class="p">PHASE 2</span></span>
+          <span class="gt">&gt;&gt;</span>
+          <span class="st">Parser<span class="p">PHASE 3–4</span></span>
+          <span class="gt">&gt;&gt;</span>
+          <span class="st">Semantic<span class="p">PHASE 5</span></span>
+          <span class="gt">&gt;&gt;</span>
+          <span class="st">Interpreter<span class="p">PHASE 6–8</span></span>
+          <span class="gt">&gt;&gt;</span>
+          <span class="st res">result</span>
+        </div>
+        <p class="lead" style="margin-top:18px;">One function — <code>PipeScriptEngine().run()</code> — chains every
+          stage and <strong>never throws</strong>. Each phase either passes data forward, or reports a structured error.
+        </p>
+        <p class="muted" style="margin-top:14px;font-family:var(--mono);font-size:14px">every error → <span
+            class="pu">{</span> phase, message, line <span class="pu">}</span> — so the editor can point at the exact
+          spot.</p>
+      </div>
+    </section>
+
+    <!-- 8 · PHASE 2 : LEXICAL -->
+    <section class="slide" data-phase="2">
+      <div class="stage">
+        <p class="eyebrow">Phase 2 · Lexical Analysis</p>
+        <h2>Text becomes tokens.</h2>
+        <div class="grid2 top">
+          <div>
+            <p class="muted" style="margin-bottom:14px;font-family:var(--mono);font-size:14px">ages <span
+                class="op">&gt;&gt;</span> removeNegatives()</p>
+            <div class="chips">
+              <span class="chip">IDENT <span class="v">ages</span></span>
+              <span class="chip pipe">PIPE <span class="v">&gt;&gt;</span></span>
+              <span class="chip">IDENT <span class="v">removeNegatives</span></span>
+              <span class="chip">LPAREN <span class="v">(</span></span>
+              <span class="chip">RPAREN <span class="v">)</span></span>
+            </div>
+          </div>
+          <ul class="checks pos">
+            <li>One left-to-right scan of the raw text</li>
+            <li>Tracks <strong>line &amp; column</strong> on every token</li>
+            <li>Handles <code>//</code> comments &amp; string escapes</li>
+            <li>Greedily folds <code>&gt;&gt;</code> into a single PIPE token</li>
+            <li>18 reserved words separated from identifiers</li>
+          </ul>
+        </div>
+        <p class="faint" style="margin-top:22px;font-size:14px">The scanner decides, character by character, where
+          <code>&gt;</code> ends and <code>&gt;&gt;</code> begins — the smallest, most literal reading of the program.
+        </p>
+      </div>
+    </section>
+
+    <!-- 9 · PHASE 3 : SYNTAX -->
+    <section class="slide" data-phase="3">
+      <div class="stage">
+        <p class="eyebrow">Phase 3 · Syntax Analysis</p>
+        <h2>Tokens become a tree.</h2>
+        <div class="grid2 top">
+          <div>
+            <p class="muted" style="font-family:var(--mono);font-size:13px;margin-bottom:12px">local Int[] cleaned =
+              ages &gt;&gt; removeNegatives() &gt;&gt; fillNull(0);</p>
+            <div class="tree">
+              <span class="node">VarDecl</span> <span class="br">(local · Int · cleaned)</span><br>
+              <span class="br">└─</span> <span class="node">PipelineExpr</span><br>
+              &nbsp;&nbsp;&nbsp;<span class="br">├─ source:</span> <span class="leaf">Identifier ages</span><br>
+              &nbsp;&nbsp;&nbsp;<span class="br">└─ steps:</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="br">├─</span> <span class="leaf">Call
+                removeNegatives()</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="br">└─</span> <span class="leaf">Call fillNull(0)</span>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h3>Recursive-descent grammar</h3>
+              <pre class="tight" style="font-size:13px;background:none;border:none;padding:0">program  → (global | class | func
+            | pipeline)*
+pipeline → 'pipeline' block
+expr     → orExpr ('<span class="op">&gt;&gt;</span>' step)*</pre>
+            </div>
+            <p class="faint" style="margin-top:14px;font-size:14px"><code>&gt;&gt;</code> binds <em>looser</em> than
+              every arithmetic and logical operator — so a full expression can flow into a pipe.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 · PHASE 4 : SCOPE -->
+    <section class="slide" data-phase="4">
+      <div class="stage">
+        <p class="eyebrow">Phase 4 · Names, Scope &amp; Binding</p>
+        <h2>Every name knows where it lives.</h2>
+        <div class="grid2 top">
+          <div class="scope">
+            <div class="frame" style="--i:0"><span class="lbl">global</span><br><span class="var"><span
+                  class="t">Int</span> passingScore</span></div>
+            <div class="frame" style="--i:22px"><span class="lbl">pipeline</span><br><span class="var"><span
+                  class="t">Int[]</span> scores &nbsp; <span class="t">Grader</span> g</span></div>
+            <div class="frame" style="--i:44px"><span class="lbl">for-body</span><br><span class="var"><span
+                  class="t">Int</span> i</span></div>
+          </div>
+          <ul class="checks pos">
+            <li>Scopes are <strong>chained frames</strong>: global → pipeline → block</li>
+            <li>Lookup walks <strong>outward</strong> until the name is found</li>
+            <li>Inner declarations <strong>shadow</strong> outer ones</li>
+            <li><code>global</code> vs <code>local</code> set where a binding is born</li>
+            <li>Assigning an undeclared name is caught, not guessed</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 · PHASE 5 : SEMANTIC -->
+    <section class="slide" data-phase="5">
+      <div class="stage">
+        <p class="eyebrow">Phase 5 · Semantic Analysis</p>
+        <h2>Catch the mistake before it runs.</h2>
+        <div class="grid2 top">
+          <ul class="checks">
+            <li>Type mismatches on assignment</li>
+            <li>Undeclared &amp; re-declared variables</li>
+            <li>Non-Bool <code>if</code> / <code>while</code> conditions</li>
+            <li>Wrong argument counts</li>
+            <li>Unknown class, method, or field</li>
+            <li>Illegal operators between types</li>
+          </ul>
+          <div class="card bad">
+            <h3 style="color:var(--bad)">A real caught error</h3>
+            <pre class="tight" style="font-size:13px"><span class="k">local</span> <span class="ty">Int</span> x = <span class="num">5</span>;
+x = <span class="str">"hello"</span>;</pre>
+            <p style="margin-top:12px;font-family:var(--mono);font-size:13px;color:var(--bad)">Semantic · line
+              3<br><span class="muted">Cannot assign a 'String' value to 'x' (declared as 'Int').</span></p>
+          </div>
+        </div>
+        <p class="faint" style="margin-top:20px;font-size:14px">Two passes: collect every definition first, then
+          type-check the tree. If semantics fail, <strong>the interpreter never runs.</strong></p>
+      </div>
+    </section>
+
+    <!-- 12 · PHASE 6 : CONTROL FLOW -->
+    <section class="slide" data-phase="6">
+      <div class="stage">
+        <p class="eyebrow">Phase 6 · Control Flow</p>
+        <h2>Decisions and loops.</h2>
+        <div class="grid2 top">
+          <pre><span class="k">local</span> <span class="ty">Int</span> total = <span class="num">0</span>;
+<span class="k">for</span> (<span class="k">local</span> <span class="ty">Int</span> i = <span class="num">0</span>; i &lt; <span class="fn">len</span>(scores); i = i + <span class="num">1</span>) {
+  <span class="k">if</span> (<span class="fn">get</span>(scores, i) &gt; <span class="num">50</span>) {
+    total = total + <span class="num">1</span>;
+  }
+}</pre>
+          <div>
+            <dl class="kv">
+              <dt>if / else</dt>
+              <dd>Branch on any truthy value.</dd>
+              <dt>for</dt>
+              <dd>Classic init · cond · update.</dd>
+              <dt>while</dt>
+              <dd>Loop until the condition breaks.</dd>
+              <dt>return</dt>
+              <dd>Unwinds cleanly out of a call.</dd>
+            </dl>
+            <div class="card" style="margin-top:16px;border-left:4px solid var(--accent)">
+              <p style="font-family:var(--mono);font-size:13px;margin:0"><span style="color:var(--accent)">safety
+                  —</span> a <strong>100,000-iteration</strong> guard turns runaway loops into a clean error, never a
+                hang.</p>
+            </div>
+          </div>
+        </div>
+        <p class="faint" style="margin-top:16px;font-size:13px;font-family:var(--mono)">truthiness: <span
+            class="num">0</span>, <span class="str">""</span>, <span class="pu">[ ]</span>, null → false</p>
+      </div>
+    </section>
+
+    <!-- 13 · PHASE 7 : DATA TYPES -->
+    <section class="slide" data-phase="7">
+      <div class="stage">
+        <p class="eyebrow">Phase 7 · Data Types</p>
+        <h2>Four primitives, two collections, one cast.</h2>
+        <div class="grid2 top">
+          <div>
+            <div class="chips" style="margin-bottom:20px;">
+              <span class="chip ty" style="color:var(--steel);border-color:var(--steel)">Int</span>
+              <span class="chip ty" style="color:var(--steel);border-color:var(--steel)">Float</span>
+              <span class="chip ty" style="color:var(--steel);border-color:var(--steel)">Bool</span>
+              <span class="chip ty" style="color:var(--steel);border-color:var(--steel)">String</span>
+              <span class="chip">Array</span>
+              <span class="chip">Dict</span>
+            </div>
+            <pre class="tight" style="font-size:14px"><span class="fn">cast</span>(<span class="ty">Int</span>, <span class="str">"42"</span>) <span class="cm">// → 42</span>
+<span class="str">"age: "</span> + <span class="fn">toString</span>(age) <span class="cm">// concat</span>
+<span class="num">7</span> / <span class="num">2</span> <span class="cm">// → 3 (Int)</span>
+<span class="num">7.0</span> / <span class="num">2</span> <span class="cm">// → 3.5 (Float)</span></pre>
+          </div>
+          <div>
+            <p class="muted" style="margin-bottom:10px;font-size:14px">Operators are type-aware — the analyzer knows the
+              result type of every combination:</p>
+            <table class="matrix">
+              <tr>
+                <th>+</th>
+                <th>Int</th>
+                <th>Float</th>
+                <th>String</th>
+              </tr>
+              <tr>
+                <th>Int</th>
+                <td>Int</td>
+                <td>Float</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <th>Float</th>
+                <td>Float</td>
+                <td>Float</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <th>String</th>
+                <td>—</td>
+                <td>—</td>
+                <td>String</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 · PHASE 8 : OOP -->
+    <section class="slide" data-phase="8">
+      <div class="stage">
+        <p class="eyebrow">Phase 8 · Object Orientation</p>
+        <h2>Classes that flow through pipes.</h2>
+        <div class="grid2 top">
+          <pre><span class="k">class</span> <span class="ty">Grader</span> {
+  <span class="ty">String</span> <span class="fn">evaluate</span>(<span class="ty">Int</span> score) {
+    <span class="k">if</span> (score &lt; passingScore) {
+      <span class="k">return</span> <span class="str">"FAIL"</span>;
+    }
+    <span class="k">return</span> <span class="str">"PASS"</span>;
+  }
+}
+<span class="cm">// one method, mapped over a list:</span>
+scores <span class="op">&gt;&gt;</span> g.<span class="fn">evaluate</span>();</pre>
+          <div>
+            <ul class="checks pos">
+              <li>Class fields + methods, created with <code>new</code></li>
+              <li>Encapsulation — methods read their own fields</li>
+              <li>Field &amp; method access via <code>.</code></li>
+            </ul>
+            <div class="card good" style="margin-top:16px">
+              <h3 style="color:var(--good)">The payoff</h3>
+              <p style="margin:0;font-size:15px" class="muted">A method dropped into a pipe <strong>auto-maps</strong>
+                over every element:</p>
+              <p style="margin-top:10px;font-family:var(--mono);font-size:14px;color:var(--good)">→ [ "PASS", "FAIL",
+                "PASS", "FAIL", "PASS" ]</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 · RECAP -->
+    <section class="slide">
+      <div class="stage">
+        <p class="eyebrow">The Whole Machine</p>
+        <h2>Eight phases. One result.</h2>
+        <div class="flow" style="margin:20px 0;">
+          <span class="st">Design<span class="p">P1</span></span><span class="gt">·</span>
+          <span class="st">Lexer<span class="p">P2</span></span><span class="gt">·</span>
+          <span class="st">Parser<span class="p">P3</span></span><span class="gt">·</span>
+          <span class="st">Scope<span class="p">P4</span></span><span class="gt">·</span>
+          <span class="st">Semantic<span class="p">P5</span></span><span class="gt">·</span>
+          <span class="st">Control<span class="p">P6</span></span><span class="gt">·</span>
+          <span class="st">Types<span class="p">P7</span></span><span class="gt">·</span>
+          <span class="st">OOP<span class="p">P8</span></span>
+        </div>
+        <div class="grid2 top" style="margin-top:10px">
+          <p class="lead">The engine returns one structured record — never an exception. The frontend uses it directly.
+          </p>
+          <pre class="tight" style="font-size:14px"><span class="pu">{</span>
+  <span class="str">success</span>:   <span class="k">true</span>,
+  <span class="str">output</span>:    [<span class="num">0</span>, <span class="num">0</span>, <span class="num">3</span>, <span class="num">9</span>, <span class="num">25</span>, <span class="num">41</span>],
+  <span class="str">print_log</span>: [ ... ],
+  <span class="str">tokens</span>:    [ ... ],  <span class="cm">// highlighting</span>
+  <span class="str">errors</span>:    [ ]      <span class="cm">// phase/line</span>
+<span class="pu">}</span></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 · BRIDGE -->
+    <section class="slide">
+      <div class="stage">
+        <p class="eyebrow">From Design to Demo</p>
+        <h2>Enough theory. Let's watch data get clean.</h2>
+        <div class="grid2 top" style="margin-top:10px">
+          <div class="card" style="border-left:4px solid var(--accent)">
+            <h3>Demo 1 — the cleaning pipeline</h3>
+            <p class="muted" style="font-size:15px">A messy array of ages flows through built-in verbs into a sorted,
+              valid result. Pipeline + data types.</p>
+          </div>
+          <div class="card" style="border-left:4px solid var(--steel)">
+            <h3>Demo 2 — objects in a pipe</h3>
+            <p class="muted" style="font-size:15px">A class method grades every score at once. OOP + control flow +
+              auto-mapping.</p>
+          </div>
+        </div>
+        <p class="lead" style="margin-top:24px">The same engine you just saw — running live.</p>
+      </div>
+    </section>
+
+    <!-- 17 · DEMO CARD -->
+    <section class="slide card-demo" data-rail="off">
+      <div class="stage">
+        <p class="eyebrow">Segment 2 · 20 minutes</p>
+        <h1 style="color:#fff">Live Demo</h1>
+        <p class="lead" style="margin-top:20px">Two programs, tokens to output — typed and run in the PipeScript Studio.
+        </p>
+        <div class="demo-list">
+          <div class="d"><span>01</span> &nbsp;Data-cleaning pipeline</div>
+          <div class="d"><span>02</span> &nbsp;Object-oriented grading pipeline</div>
+        </div>
+        <p class="faint" style="margin-top:26px;font-family:var(--mono);font-size:13px">tip — avoid <code
+            style="color:#F7924A">&gt;=</code> while typing live; use <code style="color:#F7924A">&lt;</code>. (known
+          lexer gap)</p>
+      </div>
+    </section>
+
+    <!-- 18 · ROLES CARD -->
+    <section class="slide card-roles" data-rail="off">
+      <div class="stage">
+        <p class="eyebrow">Segment 3 · 4 minutes</p>
+        <h1 style="color:#fff">Roles &amp; Participation</h1>
+        <div class="roles-grid">
+          <div class="r">
+            <div class="role">Backend &amp; Project Lead</div>
+            <div class="who">Badilla, Don Lancelot F.</div>
+          </div>
+          <div class="r">
+            <div class="role">Data Modeling &amp; Test Datasets</div>
+            <div class="who">Regalado, Gian Carlo Miguel Q.</div>
+          </div>
+          <div class="r">
+            <div class="role">Frontend — PipeScript Studio</div>
+            <div class="who">Lastrollo, Khylle Ghabriell D.</div>
+          </div>
+          <div class="r">
+            <div class="role">Docs · Script · Presentation · Video</div>
+            <div class="who">Gaytano, Kishia Nikole S.</div>
+          </div>
+        </div>
+        <p class="faint" style="margin-top:22px;font-family:var(--mono);font-size:14px"><span
+            style="color:#67ABCB">&gt;&gt;</span> All four members — ideation &amp; language design.</p>
+      </div>
+    </section>
+
+    <!-- 19 · CLOSE -->
+    <section class="slide card-close" data-rail="off">
+      <div class="stage">
+        <p class="eyebrow">Full Circle</p>
+        <h2 style="color:#fff;font-size:clamp(30px,5.5vw,60px)">Most data code is cleanup.<br>PipeScript makes cleanup
+          the point.</h2>
+        <div class="bigpipe" style="margin-top:34px;font-size:clamp(24px,5vw,52px)">
+          <span style="color:rgba(255,255,255,.65)">raw</span> <span class="gt">&gt;&gt;</span> <span
+            style="color:#fff">PipeScript</span> <span class="gt">&gt;&gt;</span> <span
+            style="color:rgba(255,255,255,.65)">insight</span>
+        </div>
+        <p class="faint" style="margin-top:38px">Thank you. &nbsp;·&nbsp; Questions welcome.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <button class="nav-btn nav-prev" id="prev" aria-label="Previous slide">‹</button>
+  <button class="nav-btn nav-next" id="next" aria-label="Next slide">›</button>
+
+  <div class="rail" id="rail"></div>
+
+  <div class="notes" id="notes"><b id="notesLabel">Speaker note</b><span id="notesText"></span></div>
+
+  <div class="hint" id="hint">◂ ▸ or <kbd>Space</kbd> to move &nbsp;·&nbsp; <kbd>N</kbd> notes &nbsp;·&nbsp;
+    <kbd>F</kbd> full screen
+  </div>
+
+  <script>
+    (function () {
+      var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+      var total = slides.length;
+      var idx = 0;
+      var counter = document.getElementById('counter');
+      var rail = document.getElementById('rail');
+      var notes = document.getElementById('notes');
+      var notesText = document.getElementById('notesText');
+      var hint = document.getElementById('hint');
+      var notesOn = false;
+
+      // Presenter talk-track, keyed by slide index.
+      var NOTES = {
+        0: "Open on the hook — say the line out loud: most data code isn't logic, it's cleanup. Set the tone.",
+        1: "Name the pain concretely: negatives, nulls, wrong types. It's always the same steps in the same order.",
+        2: "Contrast intent vs ceremony. The task is four words; pandas makes it six lines of masks and resets.",
+        3: "Reveal the language. Read the pipe line left to right. The >> is the whole idea.",
+        4: "Phase 1. State the design opinion: purpose, the >> signature, static types, C-style, batteries, one entry point.",
+        5: "Walk the anatomy top to bottom — globals, a class, and the single pipeline block.",
+        6: "The spine of the talk: the interpreter is itself a pipeline. Map each stage to its phase. It never throws.",
+        7: "Phase 2. Show source turning into token chips. Mention line/col tracking and folding >> into one PIPE.",
+        8: "Phase 3. Tokens become an AST. Point out >> is lowest precedence so a whole expression flows in.",
+        9: "Phase 4. Chained scope frames; lookup walks outward; inner shadows outer; global vs local.",
+        10: "Phase 5. List what semantics catch, then show the real String-into-Int error. If it fails, code never runs.",
+        11: "Phase 6. if/for/while, tree-walked. Call out the 100k-iteration infinite-loop guard and truthiness.",
+        12: "Phase 7. Four primitives + Array/Dict + cast. The + matrix shows operators are type-aware.",
+        13: "Phase 8. Class with fields/methods, new, encapsulation. Payoff: a method in a pipe auto-maps over a list.",
+        14: "Recap all eight phases and the single result record — errors are data, not exceptions.",
+        15: "Bridge: preview the two demos, then hand to the live segment.",
+        16: "DEMO title card. 20 minutes, two programs. Remember: type < not >= live.",
+        17: "ROLES title card. 4 minutes — each member states their part.",
+        18: "Close by bookending the hook. Thank the panel and open for questions."
+      };
+
+      // Build phase rail (8 phases)
+      for (var p = 1; p <= 8; p++) {
+        var seg = document.createElement('span');
+        seg.className = 'seg'; seg.dataset.phase = p;
+        seg.innerHTML = '<span class="dot"></span>' + (p < 8 ? '<span class="bar"></span>' : '');
+        rail.appendChild(seg);
+      }
+      var segs = Array.prototype.slice.call(rail.querySelectorAll('.seg'));
+
+      function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+      function render() {
+        slides.forEach(function (s, i) { s.classList.toggle('active', i === idx); });
+        counter.textContent = pad(idx + 1) + ' / ' + pad(total);
+
+        var cur = slides[idx];
+        var railOff = cur.dataset.rail === 'off';
+        rail.style.opacity = railOff ? '0' : '1';
+        var activePhase = parseInt(cur.dataset.phase || '0', 10);
+        segs.forEach(function (seg) {
+          var ph = parseInt(seg.dataset.phase, 10);
+          seg.classList.toggle('on', ph === activePhase);
+          seg.classList.toggle('done', activePhase > 0 && ph < activePhase);
+        });
+
+        notesText.textContent = NOTES[idx] || '—';
+        if (idx > 0) hint.classList.add('hide');
+      }
+
+      function go(n) { idx = Math.max(0, Math.min(total - 1, n)); render(); }
+      function next() { go(idx + 1); }
+      function prev() { go(idx - 1); }
+
+      document.getElementById('next').addEventListener('click', next);
+      document.getElementById('prev').addEventListener('click', prev);
+
+      document.addEventListener('keydown', function (e) {
+        switch (e.key) {
+          case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ': case 'Enter':
+            e.preventDefault(); next(); break;
+          case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+            e.preventDefault(); prev(); break;
+          case 'Home': go(0); break;
+          case 'End': go(total - 1); break;
+          case 'n': case 'N':
+            notesOn = !notesOn; notes.classList.toggle('show', notesOn); break;
+          case 'f': case 'F':
+            try { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); } catch (err) { } break;
+        }
+      });
+
+      // Advance on click of empty slide area (ignore links/buttons)
+      document.getElementById('deck').addEventListener('click', function (e) {
+        if (e.target.closest('a,button,pre,code')) return;
+        next();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+
+</html>

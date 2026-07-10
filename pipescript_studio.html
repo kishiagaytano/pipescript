@@ -9,11 +9,11 @@
        Studio at the hosted Vercel API. When opened locally as a file:// (for
        the live demo), this is skipped and the Studio falls back to the local
        backend at http://127.0.0.1:8000.
-       ▶ Replace YOUR-PROJECT below with your real Vercel project name.
-          Keep the /api suffix — the FastAPI app is mounted there. -->
+       Note: the FastAPI app answers at the domain ROOT on Vercel (e.g.
+       /run, /health), so no /api suffix here. -->
   <script>
     if (location.protocol !== "file:") {
-      window.PIPESCRIPT_API_BASE__ = "https://YOUR-PROJECT.vercel.app/api";
+      window.PIPESCRIPT_API_BASE__ = "https://pipescript.vercel.app";
     }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">

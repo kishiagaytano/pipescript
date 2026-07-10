@@ -4,6 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PipeScript Studio</title>
+  <!-- ── Hybrid deployment hookup ──────────────────────────────────────────
+       When this page is served over the web (e.g. GitHub Pages), point the
+       Studio at the hosted Vercel API. When opened locally as a file:// (for
+       the live demo), this is skipped and the Studio falls back to the local
+       backend at http://127.0.0.1:8000.
+       ▶ Replace YOUR-PROJECT below with your real Vercel project name.
+          Keep the /api suffix — the FastAPI app is mounted there. -->
+  <script>
+    if (location.protocol !== "file:") {
+      window.PIPESCRIPT_API_BASE__ = "https://YOUR-PROJECT.vercel.app/api";
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

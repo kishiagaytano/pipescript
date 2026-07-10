@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PipeScript — a mini language for data-cleaning pipelines</title>
+  <meta name="description" content="PipeScript is a minimal, statically-typed language built around the >> pipeline operator for data cleaning. Explore the language, the compiler, the live Studio, and the project presentation.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+</head>
+<body>
+
+  <!-- ══ Header ══ -->
+  <header class="site-header">
+    <div class="wrap nav">
+      <span class="brand">Pipe<span class="gt">&gt;&gt;</span>Script</span>
+      <nav class="nav-links">
+        <a href="#overview">Overview</a>
+        <a href="#how">How it works</a>
+        <a href="#language">Language</a>
+        <a href="#showcase">Showcase</a>
+        <a href="#start">Get started</a>
+      </nav>
+      <div class="nav-tools">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle color theme" title="Toggle theme">◑</button>
+        <a class="btn sm btn-ghost" href="https://github.com/kishiagaytano/pipescript" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══ Hero ══ -->
+  <section class="hero" id="overview" style="border-bottom:1px solid var(--line)">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">FEU Institute of Technology · Final Project</p>
+        <h1>Most data code isn't logic.<br>It's <span class="accent">cleanup.</span></h1>
+        <p class="hero-sub">PipeScript is a minimal, statically-typed language built around one idea — data should <em>flow</em>. Its <code>&gt;&gt;</code> pipeline operator threads a value through each cleaning step, so the code reads exactly like the intent.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="pipescript_studio.html">Launch the Studio</a>
+          <a class="btn" href="pipescript_presentation.html">View the slides</a>
+          <a class="btn btn-ghost" href="https://github.com/kishiagaytano/pipescript" target="_blank" rel="noopener">Source on GitHub</a>
+        </div>
+        <p class="hero-meta">Python 3.10+ · pure-stdlib compiler · FastAPI backend · zero-build web IDE</p>
+      </div>
+      <div class="code-panel reveal">
+        <div class="code-head">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="name">clean_ages.ps</span>
+        </div>
+<pre><span class="k">pipeline</span> {
+  <span class="k">local</span> <span class="ty">Int[]</span> ages    = [<span class="num">25</span>, <span class="num">-3</span>, <span class="k">null</span>, <span class="num">41</span>, <span class="num">-9</span>, <span class="k">null</span>];
+  <span class="k">local</span> <span class="ty">Int[]</span> cleaned = ages <span class="op">&gt;&gt;</span> <span class="fn">removeNegatives</span>()
+                             <span class="op">&gt;&gt;</span> <span class="fn">fillNull</span>(<span class="num">0</span>)
+                             <span class="op">&gt;&gt;</span> <span class="fn">sort</span>();
+
+  <span class="fn">print</span>(<span class="str">"Cleaned:"</span>, cleaned);
+  <span class="fn">print</span>(<span class="str">"Average:"</span>, <span class="fn">avg</span>(cleaned));
+}</pre>
+<pre class="out">Cleaned: [0, 0, 3, 9, 25, 41]
+Average: 13.0</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Problem / Solution ══ -->
+  <section>
+    <div class="wrap">
+      <p class="eyebrow reveal">The Problem</p>
+      <h2 class="section-title reveal">The same five steps, on every messy dataset.</h2>
+      <p class="section-intro reveal">Negatives that should be positive, nulls, blanks, values in the wrong type. Before a single insight, you clean — and it's always the same ritual. General-purpose tools can do it, but they wrap a four-word intent in six lines of ceremony.</p>
+      <div class="split">
+        <div class="panel bad reveal">
+          <h3>The ceremony — pandas</h3>
+<pre><span class="k">import</span> pandas <span class="k">as</span> pd
+df = pd.DataFrame(...)
+df = df[df.age &gt;= <span class="num">0</span>]
+df = df.dropna()
+df = df.fillna(<span class="num">0</span>)
+df = df.sort_values(...).reset_index()</pre>
+        </div>
+        <div class="panel good reveal">
+          <h3>The intent — PipeScript</h3>
+<pre>ages <span class="op">&gt;&gt;</span> <span class="fn">removeNegatives</span>()
+     <span class="op">&gt;&gt;</span> <span class="fn">removeBlanks</span>()
+     <span class="op">&gt;&gt;</span> <span class="fn">fillNull</span>(<span class="num">0</span>)
+     <span class="op">&gt;&gt;</span> <span class="fn">sort</span>();</pre>
+          <p class="lede" style="margin-top:14px">One line. Read left to right. Each stage's output feeds the next — no masks, no imports, no reset-index.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Features ══ -->
+  <section>
+    <div class="wrap">
+      <p class="eyebrow reveal">What it gives you</p>
+      <h2 class="section-title reveal">A small language with a strong opinion.</h2>
+      <div class="features">
+        <div class="feature reveal"><div class="ic">&gt;&gt;</div><h3>The pipeline operator</h3><p>The lowest-precedence operator, so whole expressions flow cleanly from one stage into the next.</p></div>
+        <div class="feature reveal"><div class="ic">Aa</div><h3>Static typing</h3><p>Int, Float, Bool, String, plus Array and Dict — type-checked before a single line runs.</p></div>
+        <div class="feature reveal"><div class="ic">✓</div><h3>40+ built-in verbs</h3><p>removeBlanks, removeNegatives, fillNull, unique, sort, avg… data cleaning with no imports.</p></div>
+        <div class="feature reveal"><div class="ic">{ }</div><h3>Objects in a pipe</h3><p>Classes, methods, and encapsulation — and a method dropped into a pipe auto-maps over a list.</p></div>
+        <div class="feature reveal"><div class="ic">!</div><h3>Real error reporting</h3><p>Every error carries its phase, a plain-English message, and a line number. The engine never throws.</p></div>
+        <div class="feature reveal"><div class="ic">◐</div><h3>A live web IDE</h3><p>The PipeScript Studio: an editor with token-based highlighting, a console, and before/after data.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ How it works ══ -->
+  <section id="how">
+    <div class="wrap">
+      <p class="eyebrow reveal">Under the Hood</p>
+      <h2 class="section-title reveal">The interpreter is, itself, a pipeline.</h2>
+      <p class="section-intro reveal">A program flows through the same left-to-right stages the language is built to express. One function — <code>PipeScriptEngine().run()</code> — chains them all and returns a single structured result, never an exception.</p>
+      <div class="flow reveal">
+        <span class="st src">source<span class="p">.ps text</span></span>
+        <span class="gt">&gt;&gt;</span>
+        <span class="st">Lexer<span class="p">PHASE 2</span></span>
+        <span class="gt">&gt;&gt;</span>
+        <span class="st">Parser<span class="p">PHASE 3–4</span></span>
+        <span class="gt">&gt;&gt;</span>
+        <span class="st">Semantic<span class="p">PHASE 5</span></span>
+        <span class="gt">&gt;&gt;</span>
+        <span class="st">Interpreter<span class="p">PHASE 6–8</span></span>
+        <span class="gt">&gt;&gt;</span>
+        <span class="st res">result</span>
+      </div>
+      <div class="phase-wrap reveal">
+        <table class="phase-table">
+          <thead><tr><th>Phase</th><th>Topic</th><th>Where it lives</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Language Design</td><td>overall syntax</td></tr>
+            <tr><td>2</td><td>Lexical Analysis</td><td>tokens.py · lexer.py</td></tr>
+            <tr><td>3</td><td>Syntax Analysis</td><td>parser.py · ast_nodes.py</td></tr>
+            <tr><td>4</td><td>Names, Scope &amp; Binding</td><td>symbol_table.py</td></tr>
+            <tr><td>5</td><td>Semantic Analysis</td><td>semantic.py</td></tr>
+            <tr><td>6</td><td>Control Flow</td><td>interpreter.py</td></tr>
+            <tr><td>7</td><td>Data Types</td><td>interpreter.py · semantic.py</td></tr>
+            <tr><td>8</td><td>Object Orientation</td><td>interpreter.py · parser.py</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Language at a glance ══ -->
+  <section id="language">
+    <div class="wrap">
+      <p class="eyebrow reveal">The Language</p>
+      <h2 class="section-title reveal">Familiar syntax, one new idea.</h2>
+      <p class="section-intro reveal">Globals and classes sit above the pipeline block. Types, control flow, and objects all work the way you'd expect — the only novelty is the pipe.</p>
+      <div class="code-panel reveal" style="margin-top:36px">
+        <div class="code-head">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="name">grader.ps</span>
+        </div>
+<pre><span class="cm">// Globals and classes live above the pipeline block.</span>
+<span class="k">global</span> <span class="ty">Int</span> passingScore = <span class="num">50</span>;
+
+<span class="k">class</span> <span class="ty">Grader</span> {
+  <span class="ty">String</span> <span class="fn">evaluate</span>(<span class="ty">Int</span> score) {
+    <span class="k">if</span> (score &gt;= passingScore) { <span class="k">return</span> <span class="str">"PASS"</span>; }
+    <span class="k">return</span> <span class="str">"FAIL"</span>;
+  }
+}
+
+<span class="k">pipeline</span> {
+  <span class="k">local</span> <span class="ty">Int[]</span> scores = [<span class="num">72</span>, <span class="num">40</span>, <span class="num">88</span>, <span class="num">15</span>, <span class="num">63</span>];
+  <span class="ty">Grader</span> g = <span class="k">new</span> <span class="ty">Grader</span>();
+
+  <span class="cm">// a method in a pipe runs on every item</span>
+  scores <span class="op">&gt;&gt;</span> g.<span class="fn">evaluate</span>();   <span class="cm">// ["PASS","FAIL","PASS","FAIL","PASS"]</span>
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Showcase ══ -->
+  <section id="showcase">
+    <div class="wrap">
+      <p class="eyebrow reveal">Explore the Project</p>
+      <h2 class="section-title reveal">Three ways in.</h2>
+      <div class="showcase">
+        <a class="show-card reveal" href="pipescript_presentation.html">
+          <div class="show-thumb deck">&gt;&gt;</div>
+          <div class="show-body">
+            <h3>The Presentation</h3>
+            <p>A 19-slide deck walking the language from a messy dataset down through all eight compiler phases. Fully interactive — arrow keys, fullscreen, speaker notes.</p>
+            <span class="go">Open the deck →</span>
+          </div>
+        </a>
+        <a class="show-card reveal" href="pipescript_studio.html">
+          <div class="show-thumb studio">◐</div>
+          <div class="show-body">
+            <h3>The Studio</h3>
+            <p>A live web IDE — type PipeScript, run it, and watch tokens, console output, and cleaned data come back from the interpreter in real time.</p>
+            <span class="go">Launch the Studio →</span>
+            <p class="note">Runs against the hosted API. If it's asleep, the first run may take a moment to wake.</p>
+          </div>
+        </a>
+        <a class="show-card reveal" href="https://github.com/kishiagaytano/pipescript" target="_blank" rel="noopener">
+          <div class="show-thumb repo">{ }</div>
+          <div class="show-body">
+            <h3>The Source</h3>
+            <p>The full repository — a pure-stdlib compiler package, the FastAPI backend, and complete documentation in the README.</p>
+            <span class="go">View on GitHub →</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Quick start ══ -->
+  <section id="start">
+    <div class="wrap">
+      <p class="eyebrow reveal">Run it Yourself</p>
+      <h2 class="section-title reveal">Up and running in four steps.</h2>
+      <p class="section-intro reveal">The compiler is pure Python with no third-party dependencies — you only need FastAPI to run the API locally.</p>
+      <div class="steps">
+        <div class="step reveal">
+          <span class="n">1</span>
+          <div class="body"><h3>Clone the repository</h3>
+<pre>git clone https://github.com/kishiagaytano/pipescript.git
+cd pipescript</pre></div>
+        </div>
+        <div class="step reveal">
+          <span class="n">2</span>
+          <div class="body"><h3>Install the backend dependencies</h3>
+<pre>pip install -r requirements.txt</pre></div>
+        </div>
+        <div class="step reveal">
+          <span class="n">3</span>
+          <div class="body"><h3>Start the API server</h3>
+          <p>Then open <code>http://localhost:8000/docs</code> to confirm it's live.</p>
+<pre>uvicorn main:app --reload --port 8000</pre></div>
+        </div>
+        <div class="step reveal">
+          <span class="n">4</span>
+          <div class="body"><h3>Open the Studio</h3>
+          <p>Double-click <code>pipescript_studio.html</code> — opened from disk it talks to your local backend automatically. Write a program and hit Run.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Footer ══ -->
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <span class="brand">Pipe<span class="gt">&gt;&gt;</span>Script</span>
+        <nav class="footer-links">
+          <a href="#overview">Overview</a>
+          <a href="pipescript_presentation.html">Presentation</a>
+          <a href="pipescript_studio.html">Studio</a>
+          <a href="https://github.com/kishiagaytano/pipescript" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+      <p class="footer-team">
+        <b>Team —</b> Badilla, Don Lancelot F. · Regalado, Gian Carlo Miguel Q. · Lastrollo, Khylle Ghabriell D. · Gaytano, Kishia Nikole S.
+      </p>
+      <p class="copyright">Design &amp; Implementation of a Mini Programming Language · FEU Institute of Technology · <span id="year"></span></p>
+    </div>
+  </footer>
+
+  <script>
+    // Year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Theme toggle (persisted; falls back to OS preference)
+    (function(){
+      var root = document.documentElement;
+      var btn = document.getElementById('themeToggle');
+      var saved = localStorage.getItem('ps-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      function current(){
+        return root.getAttribute('data-theme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      }
+      btn.addEventListener('click', function(){
+        var next = current() === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('ps-theme', next);
+      });
+    })();
+
+    // Scroll reveal
+    (function(){
+      var els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches){
+        els.forEach(function(e){ e.classList.add('in'); });
+        return;
+      }
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(en){
+          if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+      els.forEach(function(e){ io.observe(e); });
+    })();
+  </script>
+</body>
+</html>

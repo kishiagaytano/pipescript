@@ -4,6 +4,14 @@ This document is for the **backend developer**.
 Your job is to wrap the `pipescript/` package in a FastAPI server.  
 You do **not** need to touch any of the compiler files — just import and call one function.
 
+> **✅ Status: implemented & deployed.** This backend now lives in [`main.py`](main.py) and is
+> deployed as a serverless function on **Vercel**. See the [main README](README.md#architecture--the-hybrid-deployment)
+> for the full hybrid architecture (static frontend on GitHub Pages + this API on Vercel).
+>
+> - **Live API:** <https://pipescript.vercel.app> · interactive docs at [`/docs`](https://pipescript.vercel.app/docs)
+> - **Live endpoints** are served at the domain root: `/run`, `/validate`, `/examples`, `/health`.
+> - The Vercel entry point is [`api/index.py`](api/index.py); local runs use `uvicorn main:app --port 8000`.
+
 ---
 
 ## What You're Getting

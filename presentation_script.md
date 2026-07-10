@@ -16,7 +16,7 @@ FEU Institute of Technology · Programming Languages
 | Badilla, Don Lancelot F. | Backend & Project Lead |
 | Regalado, Gian Carlo Miguel Q. | Data Modeling & Test Datasets |
 | Lastrollo, Khylle Ghabriell D. | Frontend — PipeScript Studio |
-| Gaytano, Kishia Nikole S. | Docs · Script · Presentation · Video |
+| Gaytano, Kishia Nikole S. | Docs · Script · Presentation · Video · Landing Page & Deployment |
 
 **Cue key:** `[SLIDE CHANGE]` = press `→` once · `[POINT]` = gesture at screen · `[PAUSE]` = beat · `[TYPE]` / `[CLICK]` / `[EXPECT]` = demo actions.
 The deck is slide-based (no sub-animations) — one `[SLIDE CHANGE]` per advance.
@@ -429,8 +429,8 @@ Each member states their contribution (~45 sec each):
 - **Khylle Lastrollo — Frontend, PipeScript Studio.**
   Built the browser-based Studio — the live editor, token-based syntax highlighting, and the console / before-after / error panels wired to the API.
 
-- **Kishia Gaytano — Docs, Script, Presentation & Video.**
-  Authored the documentation, wrote this script, designed the slide deck, and produced and edited the presentation video.
+- **Kishia Gaytano — Docs, Script, Presentation, Video, Landing Page & Deployment.**
+  Authored the documentation, wrote this script, designed the slide deck, built the landing-page portfolio site, handled the GitHub Pages + Vercel deployment, and produced and edited the presentation video.
 
 > And all four of us shared the **ideation and language design** — the syntax, the `>>` operator, and the decision to build the whole thing around data cleaning.
 
